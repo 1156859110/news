@@ -1,14 +1,16 @@
 #include <iostream>
+#include <sys/socket.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <pthread.h>
-#include <sys/socket.h>
+#include	<sys/types.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <string.h>
 #include <cstdlib>
-
 using namespace std;
+
+const int LISTENQ = 1024;
 int BindListen(int port) 
 {
 	int listenfd , optval = 1;
@@ -24,7 +26,7 @@ int BindListen(int port)
 	serveraddr.sin_addr.s_addr = htonl(INADDR_ANY); 
 	serveraddr.sin_port        = htons((unsigned short)port); 
 	
-	if (bind(listenfd, &serveraddr, sizeof(serveraddr)) < 0)
+	if (bind(listenfd, (const struct sockaddr *)&serveraddr, sizeof(serveraddr)) < 0)
 		return -1;
 	if (listen(listenfd, LISTENQ) < 0)
 		return -1;
@@ -33,20 +35,20 @@ int BindListen(int port)
 
 
 
-string  pages = "<html><head>
-	<title>top news</title>
-	</head><body>
-	<p>Welcome to husky's top news.<br />
-	</p>
-	<hr>
+string  pages = "<html><head>\
+	<title>top news</title>\
+	</head><body>\
+	<p>Welcome to husky's top news.<br />\
+	</p>\
+	<hr>\
 	</body></html>" ;
 void HomePage(int fd) 
 {
 	string reply;     
     reply += "HTTP/1.0 200 OK\r\n";    
     reply += "Server: Top news Web Server\r\n";
-    reply += "Content-length:   "+ str(pages.size())  + " \r\n";
-    reply += "Content-Type: text/html\r\n\r\n");
+    reply += "Content-length:   "+ to_string(pages.size())  + " \r\n";
+    reply += "Content-Type: text/html\r\n\r\n";
 	reply += pages;
 	
     write(fd, reply.c_str(), strlen(reply.c_str()));                      
@@ -68,7 +70,7 @@ int main()
 	/*目前是单核cpu，以后考虑用线程池*/
 	while (1) {
 		clientlen = sizeof(clientaddr);
-		connfd = accept(listenfd, &clientaddr, &clientlen); 
+		connfd = accept(listenfd,(struct sockaddr *)&clientaddr, (socklen_t *)&clientlen); 
 		process(connfd);                                             
 		close(connfd);                                           
 	}
