@@ -1,17 +1,7 @@
-#include <iostream>
-#include <sys/socket.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <pthread.h>
-#include <sys/types.h>
-#include <netdb.h>
-#include <netinet/in.h>
-#include <string.h>
-#include <cstdlib>
-#include<fcntl.h>
-#include<sys/stat.h> 
-#include<signal.h>
-#include <sys/resource.h>
+#include "common.h"
+#include "thread_poll.h"
+
+
 using namespace std;
 
 const int LISTENQ = 1024;
@@ -43,7 +33,7 @@ string  pages = "<html><head>\
 	<title>top news</title>\
 	</head><body>\
 	<div align=\"center\">\
-		Welcome to husky's home page！\
+		Welcome to husky's home page!\
 	</div>\
 	</body></html>";
 void HomePage(int fd) 
@@ -64,6 +54,7 @@ void process(int fd)
 	char buf[9600]={0};
 	read(fd,buf,9600);
 	HomePage(fd);
+	close(fd); 
 }
 typedef void (*pf)(); 
 
@@ -104,9 +95,9 @@ daemonize(pf pFunction)
 	for (i = 0; i < rl.rlim_max; i++)
 		close(i);
 	/*将标准输入输出重定向到/dev/null.*/
-	fd0 = open("/dev/null", O_RDWR);
-	fd1 = dup(0);
-	fd2 = dup(0);
+	//fd0 = open("/dev/null", O_RDWR);
+	//fd1 = dup(0);
+	//fd2 = dup(0);
 #if 0
 	/* * Initialize the log file. */
 	openlog(cmd, LOG_CONS, LOG_DAEMON);
@@ -116,24 +107,61 @@ daemonize(pf pFunction)
 		exit(1);
 	}
 #endif
-	
+	ThreadPool();
 	pFunction();
 }
 void server() 
 {
-	int listenfd, connfd;
-	int clientlen;
+	int listenfd, connfd,clientlen;
 	struct sockaddr_in clientaddr;
 	listenfd = BindListen(80);
-	/*目前是单核cpu，以后考虑用线程池*/
-	while (1) {
-		clientlen = sizeof(clientaddr);
-		connfd = accept(listenfd,(struct sockaddr *)&clientaddr, (socklen_t *)&clientlen); 
-		process(connfd);                                             
-		close(connfd);                                           
-	}
+	ThreadPool();
+	 int epfd = epoll_create(LISTENQ + 1);
+ 	//声明epoll_event结构体的变量,ev用于注册事件,数组用于回传要处理的事件
+     struct epoll_event ev,events[200];
+     //生成用于处理accept的epoll专用的文件描述符
+     epfd = epoll_create(256);
+	 ev.data.fd = listenfd;
+	 //设置要处理的事件类型
+	 ev.events = EPOLLIN;
+	 epoll_ctl(epfd,EPOLL_CTL_ADD,listenfd,&ev);
+	 
+	 while(true) {
+		 //等待epoll事件的发生
+		 int nfds=epoll_wait(epfd,events,200,-1);
+		 //处理所发生的所有事件
+		 for(int i = 0;i < nfds; ++i)
+		 {
+			 if(events[i].data.fd == listenfd)//如果新监测到一个SOCKET用户连接到了绑定的SOCKET端口，建立新的连接。
+			 {
+				 connfd = accept(listenfd,(sockaddr *)&clientaddr, (socklen_t *)&clientlen);
+				 if(connfd<0){
+					 exit(1);
+				 }
+				 //setnonblocking(connfd);
+
+				 //设置用于读操作的文件描述符
+				 ev.data.fd = connfd;
+				 //设置用于注测的读操作事件
+				 ev.events = EPOLLIN;
+				 //注册ev
+				 epoll_ctl(epfd,EPOLL_CTL_ADD,connfd,&ev);
+			 }
+			 else if(events[i].events & EPOLLIN || events[i].events & EPOLLOUT)
+			 {
+				 cout << "EPOLL in out" << endl;
+				 if (events[i].data.fd < 0)
+					 continue;
+				 AddTask(process, events[i].data.fd);                                            
+			 }
+			 else
+				 continue;
+		 }
+	 }                                     
 }
 int main() 
 {
-	daemonize(server);
+	//daemonize(server);
+	ThreadPool();
+	server();
 }

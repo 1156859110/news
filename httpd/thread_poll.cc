@@ -1,36 +1,12 @@
-#include <pthread.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <assert.h>
-#include <unistd.h>
-#include <list>
-#include <vector>
-#include <iostream>
-//#include <sys/sysinfo.h>
-typedef void (*pFun) (void *arg);
+
+#include "common.h"
+#include "thread_poll.h"
+
 using namespace std;
-//任务函数及参数
-struct task
-{
-	pFun fun;
-	void *arg;
-};
-struct thread_pool
-{
-	pthread_mutex_t mutex;
-	pthread_cond_t cond;
-	list<struct task>tasklist;
-	//是否销毁线程池
-	bool bdestroy;
-	int threadNum;
-	vector<pthread_t>threadId;
-};
-void *RunTask(void *arg);
-static struct thread_pool *pool = (struct thread_pool*) malloc(sizeof(struct thread_pool));
- 
+struct thread_pool *pool;
 void ThreadPool()
 {
+	pool = new(struct thread_pool);
 	pthread_mutex_init(&(pool->mutex), NULL);
 	pthread_cond_init(&(pool->cond), NULL);
 	pool->bdestroy = false;
@@ -41,9 +17,8 @@ void ThreadPool()
 		pthread_create(&(pool->threadId[i]), NULL, RunTask, NULL);
 }
 	
-void AddTask(pFun _fun, void *_arg)
+void AddTask(pFun _fun, int _arg)
 {
-
 	struct task newTask;
 	newTask.fun = _fun;
 	newTask.arg = _arg;		
@@ -95,7 +70,7 @@ void *RunTask(void *arg)
 		pool->tasklist.pop_front();
 		pthread_mutex_unlock(&(pool->mutex));
 		//执行任务函数
-		(curTask.fun)(curTask.arg);
+		(*curTask.fun)(curTask.arg);
 	}
 }	
 	
