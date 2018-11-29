@@ -5,6 +5,26 @@
 using namespace std;
 
 const int LISTENQ = 1024;
+
+
+//设置socket连接为非阻塞模式
+void setnonblocking(int sockfd) 
+{
+    int opts;
+
+    opts = fcntl(sockfd, F_GETFL);
+    if(opts < 0) 
+    {
+        perror("fcntl(F_GETFL)\n");
+        exit(1);
+    }
+    opts = (opts | O_NONBLOCK);
+    if(fcntl(sockfd, F_SETFL, opts) < 0) 
+    {
+        perror("fcntl(F_SETFL)\n");
+        exit(1);
+    }
+}
 int BindListen(int port) 
 {
 	int listenfd , optval = 1;
@@ -24,13 +44,14 @@ int BindListen(int port)
 		return -1;
 	if (listen(listenfd, LISTENQ) < 0)
 		return -1;
+	cout<<"listenfd is "<<listenfd<<endl;
 	return listenfd;
 }
 
 
 
 string  pages = "<html><head>\
-	<title>top news</title>\
+	<title>husky</title>\
 	</head><body>\
 	<div align=\"center\">\
 		Welcome to husky's home page!\
@@ -39,7 +60,7 @@ string  pages = "<html><head>\
 void HomePage(int fd) 
 {
 	string reply;     
-    reply += "HTTP/1.0 200 OK\r\n";    
+    reply += "HTTP/1.1 200 OK\r\n";    
     reply += "Server: Top news Web Server\r\n";
     reply += "Content-length:   "+ to_string(pages.size())  + " \r\n";
     reply += "Content-Type: text/html\r\n\r\n";
@@ -54,7 +75,7 @@ void process(int fd)
 	char buf[9600]={0};
 	read(fd,buf,9600);
 	HomePage(fd);
-	close(fd); 
+	//close(fd); 
 }
 typedef void (*pf)(); 
 
@@ -112,50 +133,52 @@ daemonize(pf pFunction)
 }
 void server() 
 {
-	int listenfd, connfd,clientlen;
+	int listenfd,connfd;
+	int rc = 0;
+	socklen_t clientlen;
 	struct sockaddr_in clientaddr;
 	listenfd = BindListen(80);
+	setnonblocking(listenfd);
 	ThreadPool();
-	 int epfd = epoll_create(LISTENQ + 1);
- 	//声明epoll_event结构体的变量,ev用于注册事件,数组用于回传要处理的事件
-     struct epoll_event ev,events[200];
-     //生成用于处理accept的epoll专用的文件描述符
-     epfd = epoll_create(256);
-	 ev.data.fd = listenfd;
-	 //设置要处理的事件类型
-	 ev.events = EPOLLIN;
-	 epoll_ctl(epfd,EPOLL_CTL_ADD,listenfd,&ev);
-	 
-	 while(true) {
-		 //等待epoll事件的发生
-		 int nfds=epoll_wait(epfd,events,200,-1);
-		 //处理所发生的所有事件
-		 for(int i = 0;i < nfds; ++i)
+	int epfd = epoll_create(20 + 1);
+	//声明epoll_event结构体的变量,ev用于注册事件,数组用于回传要处理的事件
+	struct epoll_event ev,events[20];
+	//生成用于处理accept的epoll专用的文件描述符
+	ev.data.fd = listenfd;
+	//设置要处理的事件类型
+	ev.events = EPOLLIN;
+	if((rc = epoll_ctl(epfd,EPOLL_CTL_ADD,listenfd,&ev)) < 0){
+		 cout<<"error"<<endl;
+	}
+	 while(true){
+		 int nfds = epoll_wait(epfd,events,20,-1);
+		 cout << "nfds is " << nfds<< endl;
+		 for(int i = 0;i < nfds; i++)
 		 {
-			 if(events[i].data.fd == listenfd)//如果新监测到一个SOCKET用户连接到了绑定的SOCKET端口，建立新的连接。
-			 {
-				 connfd = accept(listenfd,(sockaddr *)&clientaddr, (socklen_t *)&clientlen);
-				 if(connfd<0){
-					 exit(1);
+			if(events[i].data.fd == listenfd){
+				 //不处理epoll_ctl的返回值为啥会影响accept的值？
+				 if((connfd=accept(listenfd,(struct sockaddr*)&clientaddr, &clientlen)) < 0){
+					 cout << "no more connection" << connfd<< endl;
+					 continue;
 				 }
-				 //setnonblocking(connfd);
-
-				 //设置用于读操作的文件描述符
+				cout << "connection fd" <<connfd << endl;
+				 setnonblocking(connfd);
 				 ev.data.fd = connfd;
-				 //设置用于注测的读操作事件
 				 ev.events = EPOLLIN;
-				 //注册ev
-				 epoll_ctl(epfd,EPOLL_CTL_ADD,connfd,&ev);
+				 if((rc = epoll_ctl(epfd,EPOLL_CTL_ADD,connfd,&ev)) < 0){
+					 cout<<"error"<<endl;
+				 }
 			 }
-			 else if(events[i].events & EPOLLIN || events[i].events & EPOLLOUT)
-			 {
-				 cout << "EPOLL in out" << endl;
+			 else if(events[i].events & EPOLLIN){
+				 cout <<events[i].data.fd<< "EPOLL in out data" << endl;
 				 if (events[i].data.fd < 0)
 					 continue;
+				 if((rc = epoll_ctl(epfd,EPOLL_CTL_DEL,connfd,&ev))<0){
+				 	 cout<<"error"<<endl;
+				 }
 				 AddTask(process, events[i].data.fd);                                            
 			 }
-			 else
-				 continue;
+			
 		 }
 	 }                                     
 }
