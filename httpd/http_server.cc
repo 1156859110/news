@@ -72,10 +72,14 @@ void HomePage(int fd)
 }
 void process(int fd) 
 {
-	char buf[9600]={0};
-	read(fd,buf,9600);
+	char buf[9601]={0};
+	int rc = 0;
+	while((rc=read(fd,buf,9600))>0){
+		buf[9600]='\0';
+		printf("%s\n",buf);
+	}
 	HomePage(fd);
-	//close(fd); 
+	close(fd); 
 }
 typedef void (*pf)(); 
 
@@ -169,11 +173,13 @@ void server()
 					 cout<<"error"<<endl;
 				 }
 			 }
-			 else if(events[i].events & EPOLLIN){
-				 cout <<events[i].data.fd<< "EPOLL in out data" << endl;
+			else if(events[i].events & EPOLLIN){
+				 cout <<events[i].data.fd<< " EPOLL in out data" << endl;
 				 if (events[i].data.fd < 0)
 					 continue;
-				 if((rc = epoll_ctl(epfd,EPOLL_CTL_DEL,connfd,&ev))<0){
+				 ev.data.fd = events[i].data.fd;
+				 ev.events = EPOLLIN;
+				 if((rc = epoll_ctl(epfd,EPOLL_CTL_DEL,events[i].data.fd,&ev))<0){
 				 	 cout<<"error"<<endl;
 				 }
 				 AddTask(process, events[i].data.fd);                                            

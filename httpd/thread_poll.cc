@@ -66,6 +66,11 @@ void *RunTask(void *arg)
 			pthread_exit(NULL);
 		}
 		cout<<"thread "<< pthread_self()<<endl;
+		
+		if(pool->tasklist.empty()) {
+			pthread_mutex_unlock(&(pool->mutex));
+			continue;
+		}
 		curTask = pool->tasklist.front();
 		pool->tasklist.pop_front();
 		pthread_mutex_unlock(&(pool->mutex));
