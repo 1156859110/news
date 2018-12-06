@@ -182,6 +182,7 @@ void server()
 				 if((rc = epoll_ctl(epfd,EPOLL_CTL_DEL,events[i].data.fd,&ev))<0){
 				 	 cout<<"error"<<endl;
 				 }
+				 //如何防止将一个fd放到多个任务里面，从而导致重复消费问题。
 				 AddTask(process, events[i].data.fd);                                            
 			 }
 			
