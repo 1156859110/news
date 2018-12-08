@@ -1,35 +1,32 @@
+#ifndef _LOG_H
+#define _LOG_H
 
-#define LOG_DEBUG if(Log.level >= Log::DEBUG)\
-    Log.getLog()<<__FILE__<<__LINE__<<getTimeVal();
-#define LOG_INFO  if(Log.level >= Log::INFO)\
-    Log.getLog()<<__FILE__<<__LINE__<<getTimeVal();
-#define LOG_ERROR if(Log.level >= Log::ERROR)\
-    Log.getLog()<<__FILE__<<__LINE__<<getTimeVal();
-	
-class Log{
-private:
-    template <typename T>;
-    int intTostr(char *pchar, T val)s
-	void appendInteger(T val);
-	const static int bufsize = 1024*1000;
-	static char rbuf[bufsize];//将buff里面的数据写到文件
-	static char wbuf[bufsize];//将数据写入到buff里面
-	char *pw;
-	char *pr;
-	int losnum;//丢失的log条数
-	int rindex;//数据写入到buff的index	
-	int windex;
-	std::mutex mLock;
-	static int level;
+#include "common.h"
+
     enum loglevel{
 		DEBUG,
 		INFO,
 		ERROR,
     };
+void* run(void *arg);
+class Log{
+private:
+    template <typename T>
+    int intTostr(char *pchar, T val);
+	template <typename T>
+	void appendInteger(T val);
+	int bufsize;
+	char *pf;
+	char *pb;
+	int losnum;//丢失的log条数
+	int bindex;
+	int findex;
+	std::mutex mLock;
 	
-	
+   	static int level;
+	pthread_t tid;
 public:
-   
+  
     Log &operator<<(bool);
 
     Log &operator<<(unsigned char);
@@ -47,10 +44,36 @@ public:
 
     Log &operator<<(const std::string &);
 	
-	void Log::getLevel();
 	
-	static Log &getLog();
+	Log():
+		bufsize(1024*1000),
+		pf(new char[bufsize]),
+		pb(new char[bufsize]),
+		losnum(0),
+		bindex(0),
+		findex(0),
+		tid(0)
+	{
+		pthread_create(&tid, NULL,run, (void*)&getLog());
+	}
+	static Log& getLog();
+	static long getTimeVal();
+	void getDate(char *pdate);
+	int swapBuff();
+	void append(const char *pchar, int len);
 	
+	void writeLog();
+	static int getLevel(){ return level;}
+	static int setLevel(int lev){
+		level = lev;
+	}
 	 ~Log();
 };
+#define LOG_DEBUG if(Log::getLevel() >= DEBUG)\
+    Log::getLog()<<__FILE__<<__LINE__<<Log::getTimeVal()
+#define LOG_INFO  if(Log::getLevel() >= INFO)\
+    Log::getLog()<<__FILE__<<__LINE__<<Log::getTimeVal()
+#define LOG_ERROR if(Log::getLevel() >= ERROR)\
+    Log::getLog()<<__FILE__<<__LINE__<<Log::getTimeVal()
 
+#endif

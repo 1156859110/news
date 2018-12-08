@@ -6,7 +6,7 @@
 #include <sys/types.h>
 #include <netdb.h>
 #include <netinet/in.h>
-#include <string.h>
+#include <cstring>
 #include <cstdlib>
 #include<fcntl.h>
 #include<sys/stat.h> 
@@ -21,5 +21,6 @@
 #include <algorithm>
 #include <sys/time.h>
 #include <mutex>
+#include <functional>
 	
 

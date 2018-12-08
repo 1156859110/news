@@ -1,6 +1,6 @@
 #include "common.h"
 #include "thread_poll.h"
-
+#include "log.h"
 
 using namespace std;
 
@@ -143,7 +143,6 @@ void server()
 	struct sockaddr_in clientaddr;
 	listenfd = BindListen(80);
 	setnonblocking(listenfd);
-	ThreadPool();
 	int epfd = epoll_create(20 + 1);
 	//声明epoll_event结构体的变量,ev用于注册事件,数组用于回传要处理的事件
 	struct epoll_event ev,events[20];
@@ -154,6 +153,8 @@ void server()
 	if((rc = epoll_ctl(epfd,EPOLL_CTL_ADD,listenfd,&ev)) < 0){
 		 cout<<"error"<<endl;
 	}
+	cout << "running begin"<<endl;
+	
 	 while(true){
 		 int nfds = epoll_wait(epfd,events,20,-1);
 		 cout << "nfds is " << nfds<< endl;
@@ -165,7 +166,9 @@ void server()
 					 cout << "no more connection" << connfd<< endl;
 					 continue;
 				 }
-				cout << "connection fd" <<connfd << endl;
+				cout << "log connection fd" <<connfd<<endl;
+				LOG_ERROR << "log connection fd" <<connfd;
+				cout << "log connectionsssss fd" <<connfd<<endl;
 				 setnonblocking(connfd);
 				 ev.data.fd = connfd;
 				 ev.events = EPOLLIN;
@@ -193,5 +196,7 @@ int main()
 {
 	//daemonize(server);
 	ThreadPool();
+	//Log::setLevel(ERROR);
+	//Log::getLog();
 	server();
 }
