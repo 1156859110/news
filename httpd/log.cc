@@ -189,6 +189,7 @@ void* run(void *arg)
 	while (true){
 		//每隔两秒写一次buff
 		sleep(2);
+		//std::cout<<"sleep 2"<<std::endl;
 		pLog->writeLog();
 	}
 }

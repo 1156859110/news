@@ -54,7 +54,6 @@ public:
 		findex(0),
 		tid(0)
 	{
-		pthread_create(&tid, NULL,run, (void*)&getLog());
 	}
 	static Log& getLog();
 	static long getTimeVal();
@@ -66,6 +65,12 @@ public:
 	static int getLevel(){ return level;}
 	static int setLevel(int lev){
 		level = lev;
+	}
+	static int threadCreate(){
+		std::cout<<"befor construct"<<std::endl;
+		pthread_create(&(getLog().tid), NULL,run, (void*)&getLog());
+		std::cout<<"after construct"<<getLog().tid<<std::endl;
+		
 	}
 	 ~Log();
 };

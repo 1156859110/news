@@ -158,17 +158,18 @@ void server()
 	 while(true){
 		 int nfds = epoll_wait(epfd,events,20,-1);
 		 cout << "nfds is " << nfds<< endl;
+		 LOG_ERROR << "accept nfds is " <<nfds;
 		 for(int i = 0;i < nfds; i++)
 		 {
 			if(events[i].data.fd == listenfd){
 				 //不处理epoll_ctl的返回值为啥会影响accept的值？
 				 if((connfd=accept(listenfd,(struct sockaddr*)&clientaddr, &clientlen)) < 0){
 					 cout << "no more connection" << connfd<< endl;
+					 LOG_ERROR << "log connection fd" <<connfd;
 					 continue;
 				 }
 				cout << "log connection fd" <<connfd<<endl;
 				LOG_ERROR << "log connection fd" <<connfd;
-				cout << "log connectionsssss fd" <<connfd<<endl;
 				 setnonblocking(connfd);
 				 ev.data.fd = connfd;
 				 ev.events = EPOLLIN;
@@ -196,7 +197,7 @@ int main()
 {
 	//daemonize(server);
 	ThreadPool();
-	//Log::setLevel(ERROR);
-	//Log::getLog();
+	Log::setLevel(ERROR);
+	Log::threadCreate();
 	server();
 }
