@@ -16,9 +16,8 @@ Cache-Control:no-cache (CRLF)
 user=jeffrey&pwd=1234  //此行为提交的数据
 */
 
-#define BUF_SIZE 9600
-enum LINE_STATUS { OK = 0, ERROR, UNFINISHED,METHOD, HEADER, CONTENT,FINISHED};	
-
+enum { OK = 0, ERROR ,UNFINISHED,FINISHED,REQUEST, HEADER, CONTENT};	
+	
 string  pages = "<html><head>\
 	<title>husky</title>\
 	</head><body>\
@@ -53,32 +52,32 @@ void notFind(int fd)
 }
 
 
-int parseLine(char* buffer, int& curindex, int& readindex)
+int HttpParser::parseLine()
 {
     char temp;
     for ( ; curindex < readindex; ++curindex)
     {
-        temp = buffer[curindex];
+        temp = buf[curindex];
         if (temp == '\r')
         {
             if ((curindex + 1 ) == readindex )
             {
                 return UNFINISHED;
             }
-            else if (buffer[curindex + 1] == '\n' )
+            else if (buf[curindex + 1] == '\n' )
             {
-                buffer[curindex++] = '\0';
-                buffer[curindex++] = '\0';
+                buf[curindex++] = '\0';
+                buf[curindex++] = '\0';
                 return OK;
             }
             return ERROR;
         }
         else if( temp == '\n')
         {
-            if( ( curindex > 1 ) &&  buffer[curindex - 1] == '\r' )
+            if( ( curindex > 1 ) &&  buf[curindex - 1] == '\r' )
             {
-                buffer[curindex-1 ] = '\0';
-                buffer[curindex++] = '\0';
+                buf[curindex-1 ] = '\0';
+                buf[curindex++] = '\0';
                 return OK;
             }
             return ERROR;
@@ -87,7 +86,7 @@ int parseLine(char* buffer, int& curindex, int& readindex)
     return UNFINISHED;
 }
 
-int parseRequest(char* pbuf)
+int HttpParser::parseRequest()
 {
     if (strcasecmp(pbuf, "GET" ) == 0 )
     {
@@ -95,7 +94,7 @@ int parseRequest(char* pbuf)
 		pbuf += 4;
         std::cout<<"method is GET"<<std::endl;
     }
-    else  if(strcasecmp(pbuf, "POST" ) == 0)
+    else if(strcasecmp(pbuf, "POST" ) == 0)
     {
 		method = "POST";
 		pbuf += 5;
@@ -122,8 +121,9 @@ int parseRequest(char* pbuf)
     return OK;
 }
 
-int parseHeaders( char* pbuf )
+int HttpParser::parseHeaders()
 {
+	//碰到头部是空行的说明解析头部已经结束
     if (pbuf[0] == '\r')
     {
         return OK;
@@ -141,7 +141,7 @@ int parseHeaders( char* pbuf )
   
     return UNFINISHED;
 }
-int parseContent(char* pbuf)
+int HttpParser::parseContent()
 {
 	std::cout<<"content len "<< contentlen<std::endl;
     if (contentlen == 0)
@@ -153,20 +153,21 @@ int parseContent(char* pbuf)
 		contentval = contentval*10+pbuf[i];
 		++i;
 	}
+	std::cout<<"content len "<< contentlen<std::endl;
     return FINISHED;
 }
-int parseStart( char* buffer, int& curindex, int& state, int& readindex, int& preindex )
+int HttpParser::parseStart()
 {
     int rc = OK;
-    while((rc = parseLine(buffer, curindex, readindex)) == OK )
+    while((rc = parseLine(buf, curindex, readindex)) == OK )
     {
-        char* pbuf = buffer + preindex;
+        char* pbuf = buf + preindex;
         preindex = curindex;
         switch (state)
         {
-            case METHOD:
+            case REQUEST:
             {
-                if ((rc = parseMethod(pbuf))== ERROR)
+                if ((rc = parseRequest())== ERROR)
                 {
                     return ERROR;
                 }
@@ -175,56 +176,54 @@ int parseStart( char* buffer, int& curindex, int& state, int& readindex, int& pr
             }
             case HEADER:
             {
-               rc = parseHeaders(pbuf)；
-				state = rc == OK?CONTENT:HEADER;
+               rc = parseHeaders();
+				state = (rc == OK?CONTENT:HEADER);
                 break;
             }
 			case CONTENT:
 			{
-				return parseContent(pbuf);
+				rc = parseContent();
+				break;
 			}
             default:
-                return ERROR;
+                rc = ERROR;
         }
     }
 	
    return rc;
 }
 
-int httpParser(int fd)
+int HttpParser::parser()
 {
-      
-        memset(buffer, '\0', BUF_SIZE);
-        int readdata = 0;
-        int readindex = 0;
-        int curindex = 0;
-        int preindex = 0;
-        int state = METHOD;
-        while(1)
-        {
-            readdata = read(fd, buffer + readindex, BUF_SIZE - readindex);
-            if (readdata == -1)
-            {
-                std::cout<<"read error"<<std::endl;
-                break;
-            }
-            else if (readdata == 0)
-            {
-                std::cout<<"remote client closed the connection"<<std::endl;
-                break;
-            }
-            readindex += readdata;
-            int rc = parseStart(buffer, curindex, state, readindex, preindex);
-            if(rc == NO_REQUEST)
-            {
-                continue;
-            }
-            else
-            {
-                //sendResponse( fd, "helloword", 9, 0 );//ok
-                break;
-			}
-        }
+	//需要持续读，加入到epoll里面
+    //readdata = read(fd, buf + readindex, bufsize - readindex);
+    if (readdata == -1)
+    {
+        std::cout<<"read error"<<std::endl;
+    }
+    else if (readdata == 0)
+    {
+        std::cout<<"remote client closed the connection"<<std::endl;
+    }
+    readindex += readdata;
+    int rc = parseStart(buf, curindex, state, readindex, preindex);
+    if(rc == FINISHED)
+    {
+		//sendResponse( fd, "helloword", 9, 0 );//ok
+    }
+	else if(rc == UNFINISHED)
+	{
+		//加入epoll等待读入
+		;
+	}
+    else
+    {
+		//解析失败发送error
+        //sendResponse( fd, "error", 9, 0 );error
+		;
+		
+	}
+
     return 0;
 }
 
