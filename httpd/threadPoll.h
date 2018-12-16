@@ -1,29 +1,20 @@
 #include "common.h"
 typedef void (*pFun) (int arg);
-//任务函数及参数
-struct task
-{
-	pFun fun;
-	int arg;
-};
+
 class ThreadPoll
 {
 private:
 	bool bdestroy;
-	int threadNum;
+	int threadnum;
+	EventThread *pevent;
 	std::vector<pthread_t>threadId;
-	int count ;
+	unsigned int count ;
 public:
-	void *RunTask(void *arg);
- 
-	ThreadPool():threadNum(get_nprocs()*2),bdestroy(false),threadId(threadNum,0){};
 	
-	
-	void AddTask(pFun _fun, int _arg);
- 
+	ThreadPool():threadnum(get_nprocs()*1.5),bdestroy(false),threadId(threadnum,0){};
+	ThreadPool(int tnum):threadnum(tnum),bdestroy(false),threadId(threadnum,0),pevent(new[threadnum]EventThread()){};
 	void PoolDestroy();
- 
-	void *RunTask(void *arg);
+
 };
 
 
