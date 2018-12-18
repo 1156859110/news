@@ -1,14 +1,18 @@
 #include "common.h"
-
+typedef pair<Timer*, Parser* >pairs;
 class EventThread
 {
 private:
 	bool bdestroy;
 	pthread_t tid;
-	int pipefd;
+	int rpipe;
+	int wpipe;
 	Epoll *pepoll;
+	list<int> newconlist;
+	unorderd_map<int,pairs> fd2p;
+	mutuex conmutuex;
 public:
-	EventThread():bdestroy(false),pipefd(1),pepoll(new Epoll(pipefd)){};
+	EventThread();
 	~EventThread();
 };
 
