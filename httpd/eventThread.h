@@ -4,16 +4,20 @@ class EventThread
 {
 private:
 	bool bdestroy;
+	bool bnewconn;
 	pthread_t tid;
 	int rpipe;
 	int wpipe;
-	Epoll *pepoll;
+	Epoll poll;
+	TimerHeap timerheap;
 	list<int> newconlist;
 	unorderd_map<int,pairs> fd2p;
-	mutuex conmutuex;
+	std::mutex conmtx;
+	
 public:
 	EventThread();
 	~EventThread();
+	int setNonBlocking(int sockfd);
 };
 
 

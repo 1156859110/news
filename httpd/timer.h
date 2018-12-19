@@ -1,21 +1,36 @@
 #include "common.h"
 
+
 class Timer
 {
 private:
-    //bool exptime;
-	int exptime;
+	int preexp;
+	int curexp;
+	int fd;
 public:
 	Timer(int timeout);
 	Timer();
 	~Timer();
-	void update(int timeout);
-	void update();
-	static std::priority_queue<Timer,vector<Timer>, cmptimer>>timerheap;
+	void updateTimer(int timeout);
+	void updateTimer();
+	void syncTimer();
 };
 
 struct cmptimer{
-    bool operator() (const Timer& a, const Timer& b ){
-	    return a.exptime > b.exptime; 
+    bool operator() (const Timer*a, const Timer*b ){
+	    return a->curexp > b->curexp; 
 	}
 };
+class TimerHeap
+{
+private:
+	std::priority_queue<Timer*,vector<Timer*>, cmptimer>>heap;
+public:
+	TimerHeap(){};
+	~TimerHeap(){};
+	Timer* getHeap();
+	void pushHeap(Timer *ptimer);
+	void popHeap();
+};
+
+

@@ -1,34 +1,45 @@
 #include "common.h"
 
-const int DEFAULT = 300;
+const int DEFAULT = 120000;//120s
 Timer::Timer(int timeout){
-    struct timeval curtime;
-    gettimeofday(&curtime, NULL);
-    exptime = curtime.tv_sec + curtime.tv_usec/1000 + timeout;
+    preexp = getTime() + timeout;
+	curexp = preexp;
 }
 Timer::Timer(){
-    struct timeval curtime;
-    gettimeofday(&curtime, NULL);
-    exptime = curtime.tv_sec + curtime.tv_usec/1000 + DEFAULT;
+    preexp = getTime() + DEFAULT;
+	curexp = preexp;
 }
 
 Timer::~Timer(){
 }
-
-void Timer::update(int timeout){
+static int Timer::getTime(){
     struct timeval curtime;
     gettimeofday(&curtime, NULL);
-    exptime = curtime.tv_sec + curtime.tv_usec/1000 + timeout;
+	//只取一天的秒数，防止越界。单位转成ms
+    return ((curtime.tv_sec%100000)*1000 + curtime.tv_usec/1000);
+}
+void Timer::updateTimer(int timeout){
+    curexp = getTime() + timeout;
 }
 
-void Timer::update(){
-    struct timeval curtime;
-    gettimeofday(&curtime, NULL);
-    exptime = curtime.tv_sec + curtime.tv_usec/1000 + DEFAULT;
+void Timer::updateTimer(){
+    curexp =  getTime()  + DEFAULT;
 }
-static void Timer::delExpTimer(){
-		timeheap.pop();
+void Timer::syncTimer(){
+	preexp = curexp;
 }
-static void Timer::addTimer(Timer &t){
-		timerheap.push(t);
+
+
+
+
+
+
+Timer* TimerHeap::getHeap(){
+	return timerheap.top();
+}
+void TimerHeap::pushHeap(Timer *ptimer){
+	timerheap.push(ptimer);
+}
+void TimerHeap::popHeap(){
+		timerheap.pop();
 }
