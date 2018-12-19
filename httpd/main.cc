@@ -2,12 +2,8 @@
 #include "thread_poll.h"
 #include "log.h"
 
-using namespace std;
 
-typedef void (*pf)(); 
-
-void
-daemonize(pf pFunction)
+void daemonize(void (*)() function)
 {
 	int					i, fd0, fd1, fd2;
 	pid_t				pid;
@@ -17,10 +13,10 @@ daemonize(pf pFunction)
 	umask(0);
 	/*获取最大文件描述*/
 	if (getrlimit(RLIMIT_NOFILE, &rl) < 0)
-		cout<<"can't get file limit"<<endl;
+		std::cout<<"can't get file limit"<<endl;
 	/*失去控制终端*/
 	if ((pid = fork()) < 0)
-		cout<<"fork error"<<endl;
+		std::cout<<"fork error"<<endl;
 	else if (pid != 0) 
 		exit(0);
 	setsid();
@@ -29,14 +25,14 @@ daemonize(pf pFunction)
 	sigemptyset(&sa.sa_mask);
 	sa.sa_flags = 0;
 	if (sigaction(SIGHUP, &sa, NULL) < 0)
-		cout<<"can't ignore SIGHUP"<<endl;
+		std::cout<<"can't ignore SIGHUP"<<endl;
 	if ((pid = fork()) < 0)
-		cout<<"fork error "<<endl;
+		std::cout<<"fork error "<<endl;
 	else if (pid != 0) 
 		exit(0);
 
 	if (chdir("/") < 0)
-		cout<<"can't change directory to /"<<endl;
+		std::cout<<"can't change directory to /"<<endl;
 	/*关闭打开的文件描述符*/
 	if (rl.rlim_max == RLIM_INFINITY)
 		rl.rlim_max = 1024;
@@ -46,16 +42,19 @@ daemonize(pf pFunction)
 	//fd0 = open("/dev/null", O_RDWR);
 	//fd1 = dup(0);
 	//fd2 = dup(0);
-
-	//ThreadPool();
-	//pFunction();
+	function();
 }
-
-int main() 
+void serverInit()
 {
-	//daemonize(server);
-	ThreadPool();
 	Log::setLevel(ERROR);
 	Log::threadCreate();
-	server();
+	ThreadPool pool;
+	Dispatch dispatch(&pool);
+	dispatch.run();
+}
+int main() 
+{
+	//daemonize(serverInit());
+	serverInit();
+	return 0;
 }
