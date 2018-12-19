@@ -1,30 +1,23 @@
 
-class HttpParser
+class Parser
 {
 	private:
 		int contentlen;
 		int contentval;
 	    int fd;
-	    int epollfd;
 		string method;
 		string verion;
 		string file;
 		string contenttype;
-		char *buf;
 		int curindex;
-		int state;
 		int readindex;
 		int preindex;
-		const int bufsize = 4096;
+		int state;
+		vector<char>readbuf;
+		vector<char>writebuf;
 	public:
-		HttpParser():fd = 0,readdata = 0,readindex = 0,curindex = 0,preindex = 0,state = REQUEST,
-		buf(new char[BUF_SIZE])
-		{
-			  memset(buf, '\0', BUF_SIZE);
-		};
-		~HttpParser(){
-			  delete[] buf;
-		};
+		Parser():fd(0),readdata (0),readindex (0),curindex (0),preindex (0),state(REQUEST)){};
+		~Parser(){}
 		int parseLine();
 		int parseRequest();
 		int parseHeaders();

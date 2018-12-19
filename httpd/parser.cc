@@ -17,7 +17,7 @@ user=jeffrey&pwd=1234  //此行为提交的数据
 */
 
 enum { OK = 0, ERROR ,UNFINISHED,FINISHED,REQUEST, HEADER, CONTENT};	
-	
+const int BUFSIZE = 1024;
 string  pages = "<html><head>\
 	<title>husky</title>\
 	</head><body>\
@@ -52,7 +52,7 @@ void notFind(int fd)
 }
 
 
-int HttpParser::parseLine()
+int Parser::parseLine()
 {
     char temp;
     for ( ; curindex < readindex; ++curindex)
@@ -86,7 +86,7 @@ int HttpParser::parseLine()
     return UNFINISHED;
 }
 
-int HttpParser::parseRequest()
+int Parser::parseRequest()
 {
     if (strcasecmp(pbuf, "GET" ) == 0 )
     {
@@ -121,7 +121,7 @@ int HttpParser::parseRequest()
     return OK;
 }
 
-int HttpParser::parseHeaders()
+int Parser::parseHeaders()
 {
 	//碰到头部是空行的说明解析头部已经结束
     if (pbuf[0] == '\r')
@@ -141,7 +141,7 @@ int HttpParser::parseHeaders()
   
     return UNFINISHED;
 }
-int HttpParser::parseContent()
+int Parser::parseContent()
 {
 	std::cout<<"content len "<< contentlen<std::endl;
     if (contentlen == 0)
@@ -156,7 +156,7 @@ int HttpParser::parseContent()
 	std::cout<<"content len "<< contentlen<std::endl;
     return FINISHED;
 }
-int HttpParser::parseStart()
+int Parser::parseStart()
 {
     int rc = OK;
     while((rc = parseLine(buf, curindex, readindex)) == OK )
@@ -193,37 +193,28 @@ int HttpParser::parseStart()
    return rc;
 }
 
-int HttpParser::parser()
+int Parser::readRequest()
 {
-	//需要持续读，加入到epoll里面
-    //readdata = read(fd, buf + readindex, bufsize - readindex);
-    if (readdata == -1)
-    {
-        std::cout<<"read error"<<std::endl;
-    }
-    else if (readdata == 0)
-    {
-        std::cout<<"remote client closed the connection"<<std::endl;
-    }
-    readindex += readdata;
-    int rc = parseStart(buf, curindex, state, readindex, preindex);
-    if(rc == FINISHED)
-    {
-		//sendResponse( fd, "helloword", 9, 0 );//ok
-    }
-	else if(rc == UNFINISHED)
-	{
-		//加入epoll等待读入
-		;
-	}
-    else
-    {
-		//解析失败发送error
-        //sendResponse( fd, "error", 9, 0 );error
-		;
-		
-	}
-
+   readdata = read(fd, readbuf + readindex, readbuf.size() - readindex)
+   readindex += readdata;
+	 
+    parseStart(readbuf, curindex, state, readindex, preindex);
+	
+   
+    return 0;
+}
+int Parser::getResponse()
+{
+	//需要持续写入，加入到epoll里面
+    writedata = write(fd, writebuf + writeindex, writebuf - writeindex);
+    writeindex += writedata;
+    return 0;
+}
+int Parser::sendResponse()
+{
+	//需要持续写入，加入到epoll里面
+    writedata = write(fd, writebuf + writeindex, writebuf - writeindex);
+    writeindex += writedata;
     return 0;
 }
 
