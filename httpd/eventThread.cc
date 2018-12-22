@@ -23,13 +23,13 @@ EventThread():bdestroy(false),bnewconn(false){
 }
 
 void EventThread::destroy(){
-	destroy = true;
+	bdestroy = true;
 }
 
 void *EventThread::run(void *arg){
 	while(!bdestroy){
 		vector<struct epoll_event>v;
-		v = pepoll->epollWait();
+		v = pepoll->epollWait(120000);
 		handleEvents(v);
 	}
 	pthread_exit(NULL);
@@ -46,9 +46,11 @@ void EventThread::addConList(int fd){
 	newconlist.push_back(fd);
 	bnewconn = true;	
 }
-void EventThread::addNewCon(){
+void EventThread::handleNewCon(){
 	int fd = 0;
 	char cbuf[8];
+	Parser *pparser = NULL;
+	Timer *ptimer = NULL;
 	while(read(rpipe,cbuf,8)>0);
 	std::lock_guard<std::mutex> locker(conmtx);
 	bnewconn = false;	
@@ -57,6 +59,9 @@ void EventThread::addNewCon(){
 		if(pepoll->addInEvents(fd)!=0){
 			return ;
 		}
+		pparser = new Parser();
+		ptimer = new Timer();
+		fd2p[fd] = {pparser,ptimer};
 		newconlist.pop_front();
 	}	
 }
@@ -65,29 +70,28 @@ void EventThread::handleEvents(vector<struct epoll_event> &evts){
 	Parser *pparser = NULL;
 	pairs pp;
 	for(auto i:evts){
-		pp = fd2p.get(evts[i].data.fd);
-		pparser = pp.first();
-		ptimer = pp.second();
 		if(evts[i].data.fd == rpipe){
-			addNewCon();
+			handleNewCon();
 		}else{
+			pp = fd2p.get(evts[i].data.fd);
+			pparser = pp.first;
+			ptimer = pp.second;
 			if(evts[i].events & EPOLLIN){
-				if(pparser->parser(fd) == FINISHED){
-					if(pparser->response(fd)!=0){
-						pepoll->addOutEvents(fd);
-					}
-					//出错加入epoll
+				pparser->readRequest();
+				if(!pparser->sendResponse()){
+					pepoll->addOutEvents(evts[i].data.fd);
 				}
 			}
 			if(evts[i] & EPOLLOUT){
-				if(pparser->response(fd)!=0){
-					pepoll->addOutEvents(fd);
+				if(pparser->sendResponse()){
+					pepoll->delOutEvents(evts[i].data.fd);
 				}
-				pepoll->delOutEvents(fd);
 			}
+			ptimer->update();
 		}
 		
 	}
+	delExpEvents();
 }
 
 int EventThread::setNonBlocking(int sockfd) {
@@ -105,11 +109,12 @@ int EventThread::setNonBlocking(int sockfd) {
 	return rc;
 }
 
-	
 void EventThread::delExpEvents(){
 		int time = Timer::getTime();
 		
 		Timer *ptimer = timerheap.getHeap();
+		Parser *pparser = NULL;
+		if(ptimer == NULL) return;
 		//最小的的都没有超时，不更新堆，直接返回。
 		if(ptimer->preexp > time) return;
 		timerheap.popHeap();
@@ -118,9 +123,11 @@ void EventThread::delExpEvents(){
 			timerheap.push(ptimer);
 		}
 		while((ptimer->curexp < time){
+			pparser = fd2p[ptimer->fd].second;
+			delete pparser;
+			fd2p.erase(ptimer->fd);
 			close(ptimer->fd);
-			delete parser;
-			delete timer;
+			delete ptimer;
 			ptimer = timerheap.getHeap();
 			timerheap.pop();
 		}

@@ -7,9 +7,9 @@ Epoll(int pfd):epfd(epoll_create(1),rpipe(pfd){
 ~Epoll(){
 	delInEvents(rpipe);
 }
-vector<struct epoll_event> Epoll::epollWait() 
+vector<struct epoll_event> Epoll::epollWait(int waittime) 
 {
-	int num = epoll_wait(epfd,&evts[0],evts.size(),-1);
+	int num = epoll_wait(epfd,&evts[0],evts.size(),waittime);
 	vector<struct epoll_event>v(evts,evts+num);
 	std::cout<<fdactive<<" active events"<<endl; 
 	LOG_DEBUG<<fdactive<<" active events"; 

@@ -18,66 +18,31 @@ user=jeffrey&pwd=1234  //此行为提交的数据
 
 enum { OK = 0, ERROR ,UNFINISHED,FINISHED,REQUEST, HEADER, CONTENT};	
 const int BUFSIZE = 1024;
-string  pages = "<html><head>\
-	<title>husky</title>\
-	</head><body>\
-	<div align=\"center\">\
-		Welcome to husky's home page!\
-	</div>\
-	</body></html>";
-void HomePage(int fd) 
-{
-	string reply;     
-    reply += "HTTP/1.1 200 OK\r\n";    
-    reply += "Server: husk's Web Server\r\n";
-    reply += "Content-length:   "+ to_string(pages.size())  + " \r\n";
-    reply += "Content-Type: text/html\r\n\r\n";
-	reply += "Connection: Keep-Alive\r\n";
-	reply += pages;
-	
-    write(fd, reply.c_str(), strlen(reply.c_str()));                      
- 
-   return;                 
-}
-void notFind(int fd) 
-{
-	string reply;     
-    reply += "HTTP/1.1 400 OK\r\n";    
-    reply += "Server: husk's Web Server\r\n";
-    reply += "Content-length:   "+ to_string(pages.size())  + " \r\n";
-    reply += "Content-Type: text/html\r\n\r\n";
-	reply += pages;
-    write(fd, reply.c_str(), strlen(reply.c_str()));                           
-   return;                 
+
+Parser::Parser():fd(0),readdata (0),readindex (0),curindex (0),preindex (0),
+state(REQUEST),readbuf(new char[BUFSIZE]),writebuf(NULL)){
+	memset(readbuf,0,sizeof(BUFSIZE));
+};
+
+~Parser(){
+	delete[] readbuf;
 }
 
-
-int Parser::parseLine()
-{
+int Parser::parseLine(){
     char temp;
-    for ( ; curindex < readindex; ++curindex)
-    {
-        temp = buf[curindex];
-        if (temp == '\r')
-        {
-            if ((curindex + 1 ) == readindex )
-            {
+    for ( ; curindex < readindex; ++curindex){
+        temp = readbuf[curindex];
+        if (temp == '\r'){
+            if ((curindex + 1 ) == readindex ){
                 return UNFINISHED;
             }
-            else if (buf[curindex + 1] == '\n' )
-            {
-                buf[curindex++] = '\0';
-                buf[curindex++] = '\0';
+            else if (readbuf[curindex + 1] == '\n' ){
                 return OK;
             }
             return ERROR;
         }
-        else if( temp == '\n')
-        {
-            if( ( curindex > 1 ) &&  buf[curindex - 1] == '\r' )
-            {
-                buf[curindex-1 ] = '\0';
-                buf[curindex++] = '\0';
+        else if( temp == '\n'){
+            if( ( curindex > 1 ) &&  readbuf[curindex - 1] == '\r'){
                 return OK;
             }
             return ERROR;
@@ -86,136 +51,140 @@ int Parser::parseLine()
     return UNFINISHED;
 }
 
-int Parser::parseRequest()
+int Parser::parseReqline(char *pbuf)
 {
-    if (strcasecmp(pbuf, "GET" ) == 0 )
-    {
+    if (strncasecmp(pbuf, "GET",3) == 0 ){
 		method = "GET";
-		pbuf += 4;
-        std::cout<<"method is GET"<<std::endl;
+		pbuf += 3;
     }
-    else if(strcasecmp(pbuf, "POST" ) == 0)
-    {
+    else if(strncasecmp(pbuf, "POST",4) == 0){
 		method = "POST";
-		pbuf += 5;
-		std::cout<<"method is POST"<<std::endl;
+		pbuf += 4;
     }
-    else
-    {
-		std::cout<<"unknown method"<<std::endl;
-        return ERROR;
+    else if(strncasecmp(pbuf, "HEAD",4) == 0){
+		method = "HEAD";
+		pbuf += 4;
     }
+	else{
+		method = "UNKNOWN";
+    }
+	std::cout<<"method is"<<method<<std::endl;
+	
 	char *p = strchr(pbuf,' ');
 	if(p == NULL) return ERROR;
+	strncpy(skey.c_str(),pbuf,p-pbuf);
+	std::cout<<"file is"<<skey<<std::endl;
 	pbuf = p + 1;//指向httpversion
-    if (strcasecmp(pbuf, "HTTP/1.1" ) == 0 ){
+    if (strncasecmp(pbuf, "HTTP/1.1" ,8) == 0 ){
     	version = "HTTP/1.1";
     }
-	else if(strcasecmp(pbuf, "HTTP/1.0" ) == 0 ){
+	else if(strncasecmp(pbuf, "HTTP/1.0",8 ) == 0 ){
 		version = "HTTP/1.0";
 	}
 	else{
-		std::cout<<"unknown version"<<std::endl;
-		return ERROR;
+		version = "UNKNOWN";
 	}
+	std::cout<<"version is "<<version<<std::endl;
     return OK;
 }
 
-int Parser::parseHeaders()
+int Parser::parseHeaders(char *pbuf)
 {
 	//碰到头部是空行的说明解析头部已经结束
-    if (pbuf[0] == '\r')
-    {
-        return OK;
-    }
+    if (pbuf[0] == '\r')  return FINISHED;
 	
-    if (strncasecmp(pbuf, "Content-Length:", 15 ) == 0)
-    {
+    if (strncasecmp(pbuf, "Content-Length:", 15 ) == 0){
         pbuf += 15;
 		int i = 0;
-		while(pbuf[i]!=' '){
-			contentlen = contentlen*10+pbuf[i];
-			i++;
+		while(pbuf[i] != ' '){
+			contentlen = contentlen*10+ pbuf[i]-'0';
+			++i;
 		}
     }
-  
     return UNFINISHED;
 }
-int Parser::parseContent()
-{
+int Parser::parseContent(){
 	std::cout<<"content len "<< contentlen<std::endl;
-    if (contentlen == 0)
-    {
-        return FINISHED;
-    }
-	int i = 0;
-	while(i < contentlen){
-		contentval = contentval*10+pbuf[i];
-		++i;
-	}
-	std::cout<<"content len "<< contentlen<std::endl;
+	LOG_DEBUG<<"content len "<< contentlen;
+	//暂时不处理content内容
+	curindex += contentlen;
+	contentlen = 0;
+	if(curindex > readindex) return UNFINISHED;
+	preindex = curindex;
+	state = FINISHED;
+	
     return FINISHED;
 }
-int Parser::parseStart()
-{
-    int rc = OK;
-    while((rc = parseLine(buf, curindex, readindex)) == OK )
-    {
-        char* pbuf = buf + preindex;
-        preindex = curindex;
-        switch (state)
-        {
-            case REQUEST:
-            {
-                if ((rc = parseRequest())== ERROR)
-                {
-                    return ERROR;
-                }
-				state = HEADER;
-                break;
-            }
-            case HEADER:
-            {
-               rc = parseHeaders();
-				state = (rc == OK?CONTENT:HEADER);
-                break;
-            }
-			case CONTENT:
-			{
-				rc = parseContent();
-				break;
+int Parser::parseStart(){
+	char* pbuf = NULL;
+	while(curindex < readindex){
+		if(state == REQUEST || state == HEADER){
+		    while(parseLine(readbuf, curindex, readindex)) == OK ){
+		        pbuf = readbuf + preindex;
+		        preindex = curindex;
+		        switch (state){
+		            case REQUEST:
+		                parseReqline(pbuf);
+						state = HEADER;
+		                break;
+		            case HEADER:		           
+		               if(parseHeaders(pbuf) == FINISHED){
+		               	state = CONTENT;
+		               }
+		                break;
+		        }
+				if(state == CONTENT) break;
 			}
-            default:
-                rc = ERROR;
-        }
-    }
-	
-   return rc;
+		}
+		//现在pre和cur是相等的。
+	    pbuf = readbuf + preindex;
+		parseContent(pbuf);
+		if(state == FINISHED){
+			getResponse();
+			state = REQUEST;
+		}
+	}
+   return 0;
 }
 
-int Parser::readRequest()
-{
-   readdata = read(fd, readbuf + readindex, readbuf.size() - readindex)
+void Parser::readRequest(){
+	if(readindex == BUFSIZE){
+		memmove(readbuf,readbuf+preindex,BUFSIZE - preindex);
+		memset(readbuf + BUFSIZE - preindex,0,preindex);
+		readindex -= preindex;
+		curindex -= preindex;
+		preindex = 0;
+	}
+   int readdata = read(fd, readbuf + readindex,  BUFSIZE - readindex);
+   if(readdata < 0 ) return ;
    readindex += readdata;
-	 
-    parseStart(readbuf, curindex, state, readindex, preindex);
+   parseStart(readbuf, curindex, state, readindex, preindex);
+}
+int Parser::getResponse(){
+	//获取wtirebuf和size，这里需要shared ptr,避免数据拷贝；
+	//psend = ;
+	//size = ;
+	//本线程不会对list同时进行添加或者删除操作，不需要锁
+	sendlist.push_back({psend,size});
+    return 0;
+}
+bool Parser::sendResponse(){
+	bool bcontinue = false;
+	do{
+		if(sendlist.size() == 0) return true;
+		char *psend = sendlist.front().first;
+		wbufsize = sendlist.front().second;
+	    int writedata = write(fd, psend + writeindex,wbufsize - writeindex);
+	    writeindex += writedata;
+		bcontinue  = (writeindex == wbufsize);
+		if(writeindex == wbufsize){
+			writeindex = 0;
+			wbufsize = 0;
+			sendlist.pop_front();
+		}
+	}while(bcontinue);
 	
-   
-    return 0;
-}
-int Parser::getResponse()
-{
-	//需要持续写入，加入到epoll里面
-    writedata = write(fd, writebuf + writeindex, writebuf - writeindex);
-    writeindex += writedata;
-    return 0;
-}
-int Parser::sendResponse()
-{
-	//需要持续写入，加入到epoll里面
-    writedata = write(fd, writebuf + writeindex, writebuf - writeindex);
-    writeindex += writedata;
-    return 0;
+	return writeindex == wbufsize;
 }
 
 

@@ -1,23 +1,24 @@
-
 class Parser
 {
 	private:
-		int contentlen;
-		int contentval;
 	    int fd;
 		string method;
 		string verion;
-		string file;
+		string skey;
 		string contenttype;
+		int contentlen;
 		int curindex;
 		int readindex;
 		int preindex;
 		int state;
-		vector<char>readbuf;
-		vector<char>writebuf;
+		char *readbuf;
+		char *writebuf;
+		char wbufsize;
+		int writeindex;
+		list<parit<char *,int>>sendlist;
 	public:
-		Parser():fd(0),readdata (0),readindex (0),curindex (0),preindex (0),state(REQUEST)){};
-		~Parser(){}
+		Parser();
+		~Parser();
 		int parseLine();
 		int parseRequest();
 		int parseHeaders();
