@@ -1,5 +1,5 @@
-#include "common.h"
-
+#ifndef _TIMER_H_
+#define _TIMER_H_
 
 class Timer
 {
@@ -14,17 +14,21 @@ public:
 	void updateTimer(int timeout);
 	void updateTimer();
 	void syncTimer();
+	int getCurexp() const;
+	int getPreexp() const;
+	int getFd() const;
+	static int getTime();
 };
 
 struct cmptimer{
     bool operator() (const Timer*a, const Timer*b ){
-	    return a->curexp > b->curexp; 
+	    return a->getCurexp() > b->getCurexp(); 
 	}
 };
 class TimerHeap
 {
 private:
-	std::priority_queue<Timer*,vector<Timer*>, cmptimer>>heap;
+	std::priority_queue<Timer*,std::vector<Timer*>, cmptimer>timerheap;
 public:
 	TimerHeap(){};
 	~TimerHeap(){};
@@ -32,5 +36,5 @@ public:
 	void pushHeap(Timer *ptimer);
 	void popHeap();
 };
-
+#endif
 

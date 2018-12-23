@@ -1,5 +1,5 @@
 #include "common.h"
-
+#include "timer.h"
 const int DEFAULT = 120000;//120s
 Timer::Timer(int timeout){
     preexp = getTime() + timeout;
@@ -12,7 +12,7 @@ Timer::Timer(){
 
 Timer::~Timer(){
 }
-static int Timer::getTime(){
+int Timer::getTime(){
     struct timeval curtime;
     gettimeofday(&curtime, NULL);
 	//只取一天的秒数，防止越界。单位转成ms
@@ -29,10 +29,15 @@ void Timer::syncTimer(){
 	preexp = curexp;
 }
 
-
-
-
-
+int Timer::getCurexp() const{
+	return curexp;
+}
+int Timer::getPreexp() const{
+	return preexp;
+}
+int Timer::getFd() const{
+	return fd;
+}
 
 Timer* TimerHeap::getHeap(){
 	return timerheap.top();

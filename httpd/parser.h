@@ -1,11 +1,15 @@
+#ifndef _PARSER_H_
+
+#define _PARSER_H_
+
 class Parser
 {
 	private:
 	    int fd;
-		string method;
-		string verion;
-		string skey;
-		string contenttype;
+		std::string method;
+		std::string verion;
+		std::string skey;
+		std::string contenttype;
 		int contentlen;
 		int curindex;
 		int readindex;
@@ -15,19 +19,23 @@ class Parser
 		char *writebuf;
 		char wbufsize;
 		int writeindex;
-		list<parit<char *,int>>sendlist;
+		std::list<std::pair<char *,int>>sendlist;
 	public:
 		Parser();
 		~Parser();
 		int parseLine();
-		int parseRequest();
-		int parseHeaders();
+		int parseReqline(char *pbuf);
+		int parseHeaders(char *pbuf);
 		int parseContent();
 		int parseStart();
       int parser(); 
+	  
+	  void readRequest();
+	  int getResponse();
+	  bool sendResponse();
 };
 
-
+#endif
 
 
 
