@@ -1,14 +1,11 @@
-#ifndef _LOG_H
-#define _LOG_H
-
-#include "common.h"
-
+#ifndef _LOG_H_
+#define _LOG_H_
     enum loglevel{
 		DEBUG,
 		INFO,
 		ERROR,
     };
-void* run(void *arg);
+
 class Log{
 private:
     template <typename T>
@@ -65,14 +62,15 @@ public:
 	static int getLevel(){ return level;}
 	static int setLevel(int lev){
 		level = lev;
+		return 0;
 	}
-	static int threadCreate(){
+	static void threadCreate(){
 		std::cout<<"befor construct"<<std::endl;
-		pthread_create(&(getLog().tid), NULL,run, (void*)&getLog());
+		pthread_create(&(getLog().tid), NULL,Log::runLog, (void*)&getLog());
 		std::cout<<"after construct"<<getLog().tid<<std::endl;
-		
 	}
 	 ~Log();
+	 static void* runLog(void *arg);
 };
 #define LOG_DEBUG if(Log::getLevel() >= DEBUG)\
     Log::getLog()<<__FILE__<<__LINE__<<Log::getTimeVal()

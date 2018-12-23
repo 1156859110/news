@@ -50,7 +50,7 @@ void serverInit()
 	Log::threadCreate();
 	ThreadPool pool;
 	Dispatch dispatch(&pool);
-	dispatch.run();
+	dispatch.runDispatch();
 }
 int main() 
 {

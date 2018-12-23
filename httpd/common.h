@@ -1,3 +1,6 @@
+#ifndef _COMMON_H_
+#define _COMMON_H_
+	
 #include <iostream>
 #include <sys/socket.h>
 #include <stdio.h>
@@ -22,5 +25,7 @@
 #include <sys/time.h>
 #include <mutex>
 #include <functional>
-	
+#include <unordered_map>	
 #include <errno.h>
+#include <queue>	
+#endif

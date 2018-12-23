@@ -1,5 +1,7 @@
-#include "log.h"
+
 #include "common.h"
+#include "log.h"
+
 int Log::level = 0;
 static const char digits[] = "9876543210123456789";
 static const char *zero = digits + 9;
@@ -182,8 +184,8 @@ void Log::writeLog()
 		bindex = 0;
 	}
 }
-
-void* run(void *arg)
+//在线程里面执行的函数不能是此有对象的，会导致参数名不一致
+static void* runLog(void *arg)
 {
 	Log *pLog = (Log *)arg;
 	while (true){

@@ -1,22 +1,16 @@
 #include "common.h"
-#include "thread_poll.h"
+
 #include "log.h"
+#include "epoll.h"
+#include "timer.h"
+#include "parser.h"
+#include "eventThread.h"
+#include "threadPool.h"
+#include "dispatch.h"
 
 const int LISTENQ = 1024;
 
-Dispatch::Dispatch(ThreadPool* pool):port(80),pthrdpool(pool)
-{
-	bindListen(port);
-	setNonBlocking(listenfd);   
-	pepoll = new Epoll(listenfd);             
-}
-Dispatch::~Dispatch() 
-{ 
-	close(listenfd);  
-	delete pepoll; 
-}
-int Dispatch::setNonBlocking(int sockfd) 
-{
+int Dispatch::setNonBlocking(int sockfd){
     int opts = 0;
 	int rc = 0;
     opts = fcntl(sockfd, F_GETFL);
@@ -31,8 +25,7 @@ int Dispatch::setNonBlocking(int sockfd)
 	return rc;
 }
 
-int Dispatch::bindListen() 
-{
+int Dispatch::bindListen(){
 	struct sockaddr_in serveraddr;
   
 	if ((listenfd = socket(AF_INET, SOCK_STREAM, 0)) < 0){
@@ -56,26 +49,35 @@ int Dispatch::bindListen()
 		LOG_ERROR<<"listen error\n";
 		exit(1);
 	}
-	std::cout<<"listenfd is "<<listenfd<<endl;
+	std::cout<<"listenfd is "<<listenfd<<std::endl;
 	LOG_INFO<<"listenfd is "<<listenfd;
 	return 0;
 }
-void Dispatch::run() 
-{
+Dispatch::Dispatch(ThreadPool* pool):port(80),pthrdpool(pool){
+	bindListen();
+	setNonBlocking(listenfd);   
+	pepoll = new Epoll(listenfd);             
+}
+Dispatch::~Dispatch(){ 
+	close(listenfd);  
+	delete pepoll; 
+}
+void Dispatch::runDispatch(){
+	//Dispatch *pdispatch = (Dispatch *)arg;
 	//注意此处不初始化会导致accept异常。
 	socklen_t clientlen = 0;
 	struct sockaddr_in clientaddr;
 	EventThread *pevthrd = NULL;
 	int connfd = 0;
 	 while(true){
-		 pepoll->epollWait();
+		 pepoll->epollWait(-1);
 		 while((connfd=accept(listenfd,(struct sockaddr*)&clientaddr, &clientlen)) > 0){
-			 std::cout << "new connection fd " << connfd<< endl;
+			 std::cout << "new connection fd " << connfd<< std::endl;
 			 LOG_DEBUG << "new connection fd " <<connfd;
 			 setNonBlocking(connfd);
 			 pevthrd =  pthrdpool->getEventThread();
 			 pevthrd->addConList(connfd);
 		 }	
-		 pthrdpool->notify();
+		pthrdpool->notify();
 	 }                              
 }

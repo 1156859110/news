@@ -4,12 +4,14 @@ CC_FILES = $(shell ls *.cc)
 BASE     = $(basename $(CC_FILES))
 
 OBJS     = $(addsuffix .o, $(BASE))
-
+LIBS    := -lpthread
+CFLAGS  := -std=c++11 -g -Wall
+CXXFLAGS	:= $(CFLAGS)
 $(TARGET):$(OBJS)
-	g++ -std = c++0x -pthread -o $(TARGET)$(OBJS)
-	obj/%.o:%.cc
-		g++ -std = c++0x -pthread  -o $@ $<
-		clean:
-			-rm -f news
+	g++	$(CXXFLAGS) -o $(TARGET)$(OBJS)	$(LIBS)
+	%.o:%.cc
+	g++	$(CXXFLAGS) -o $@ $< $(LIBS)
+	clean:
+	-rm -f news
 
-			-rm -f *.o
+	-rm -f *.o

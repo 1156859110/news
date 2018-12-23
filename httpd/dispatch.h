@@ -1,17 +1,18 @@
-#include "common.h"
-#include "log.h"
-
-class ThreadPoll;
+#ifndef _DISPATCH_H_
+#define _DISPATCH_H_
+void *runDispatch(void *arg);
 class Dispatch{
 private:
 	int port;
 	int listenfd;
 	Epoll *pepoll;
-	ThreadPoll *pthrdpool;
+	ThreadPool *pthrdpool;
 public:
-	int bindListen() ;
-	int setNonBlocking(int sockfd);
-	void run();
-	Dispatch(ThreadPoll *pool);
+	Dispatch(ThreadPool *pool);
 	~Dispatch();
-}
+	int bindListen();
+	int setNonBlocking(int sockfd);
+	void runDispatch();
+	
+};
+#endif

@@ -16,6 +16,9 @@ Cache-Control:no-cache (CRLF)
 user=jeffrey&pwd=1234  //此行为提交的数据
 */
 
+#include "common.h"
+#include "parser.h"
+
 enum { OK = 0, ERROR ,UNFINISHED,FINISHED,REQUEST, HEADER, CONTENT};	
 const int BUFSIZE = 1024;
 
@@ -24,7 +27,7 @@ state(REQUEST),readbuf(new char[BUFSIZE]),writebuf(NULL)){
 	memset(readbuf,0,sizeof(BUFSIZE));
 };
 
-~Parser(){
+Parser::~Parser(){
 	delete[] readbuf;
 }
 
@@ -162,9 +165,10 @@ void Parser::readRequest(){
 }
 int Parser::getResponse(){
 	//获取wtirebuf和size，这里需要shared ptr,避免数据拷贝；
-	//psend = ;
-	//size = ;
+	char *psend = NULL;
+	int size = 0;
 	//本线程不会对list同时进行添加或者删除操作，不需要锁
+	Lru::getData(key,psend,size);
 	sendlist.push_back({psend,size});
     return 0;
 }
