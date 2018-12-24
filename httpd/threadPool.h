@@ -2,13 +2,14 @@
 
 #define _THREAD_POOL_H_
 
+//class EventThread;
 
 class ThreadPool
 {
 private:
 	bool bdestroy;
 	int threadnum;
-	EventThread *pevtthrd;
+	EventThread **pevtthrd;
 	std::vector<pthread_t>tid;
 	unsigned int count ;
 public:

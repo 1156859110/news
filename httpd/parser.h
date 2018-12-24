@@ -7,8 +7,8 @@ class Parser
 	private:
 	    int fd;
 		std::string method;
-		std::string verion;
-		std::string skey;
+		std::string version;
+		int key;
 		std::string contenttype;
 		int contentlen;
 		int curindex;

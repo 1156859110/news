@@ -17,13 +17,16 @@ user=jeffrey&pwd=1234  //此行为提交的数据
 */
 
 #include "common.h"
+#include "log.h"
+#include "cache.h"
 #include "parser.h"
 
-enum { OK = 0, ERROR ,UNFINISHED,FINISHED,REQUEST, HEADER, CONTENT};	
+enum { OK = 0, ERR ,UNFINISHED,FINISHED,REQUEST, HEADER, CONTENT};	
 const int BUFSIZE = 1024;
 
-Parser::Parser():fd(0),readdata (0),readindex (0),curindex (0),preindex (0),
-state(REQUEST),readbuf(new char[BUFSIZE]),writebuf(NULL)){
+Parser::Parser():fd(0),writeindex(0),wbufsize(0),readindex (0),curindex (0),preindex (0),
+state(REQUEST),readbuf(new char[BUFSIZE]),writebuf(NULL),contentlen(0),method("UNKNOWN"),
+version("HTTP/1.1"),key(0),contenttype("HTML"){
 	memset(readbuf,0,sizeof(BUFSIZE));
 };
 
@@ -42,13 +45,13 @@ int Parser::parseLine(){
             else if (readbuf[curindex + 1] == '\n' ){
                 return OK;
             }
-            return ERROR;
+            return ERR;
         }
         else if( temp == '\n'){
             if( ( curindex > 1 ) &&  readbuf[curindex - 1] == '\r'){
                 return OK;
             }
-            return ERROR;
+            return ERR;
         }
     }
     return UNFINISHED;
@@ -74,9 +77,10 @@ int Parser::parseReqline(char *pbuf)
 	std::cout<<"method is"<<method<<std::endl;
 	
 	char *p = strchr(pbuf,' ');
-	if(p == NULL) return ERROR;
-	strncpy(skey.c_str(),pbuf,p-pbuf);
-	std::cout<<"file is"<<skey<<std::endl;
+	if(p == NULL) return ERR;
+	//strncpy(pbuf,key.c_str(),p-pbuf);
+	//todo 待解析key
+	std::cout<<"file is"<<key<<std::endl;
 	pbuf = p + 1;//指向httpversion
     if (strncasecmp(pbuf, "HTTP/1.1" ,8) == 0 ){
     	version = "HTTP/1.1";
@@ -107,7 +111,7 @@ int Parser::parseHeaders(char *pbuf)
     return UNFINISHED;
 }
 int Parser::parseContent(){
-	std::cout<<"content len "<< contentlen<std::endl;
+	std::cout<<"content len "<< contentlen<<std::endl;
 	LOG_DEBUG<<"content len "<< contentlen;
 	//暂时不处理content内容
 	curindex += contentlen;
@@ -122,7 +126,7 @@ int Parser::parseStart(){
 	char* pbuf = NULL;
 	while(curindex < readindex){
 		if(state == REQUEST || state == HEADER){
-		    while(parseLine(readbuf, curindex, readindex)) == OK ){
+		    while(parseLine() == OK ){
 		        pbuf = readbuf + preindex;
 		        preindex = curindex;
 		        switch (state){
@@ -141,7 +145,7 @@ int Parser::parseStart(){
 		}
 		//现在pre和cur是相等的。
 	    pbuf = readbuf + preindex;
-		parseContent(pbuf);
+		parseContent();
 		if(state == FINISHED){
 			getResponse();
 			state = REQUEST;
@@ -161,14 +165,14 @@ void Parser::readRequest(){
    int readdata = read(fd, readbuf + readindex,  BUFSIZE - readindex);
    if(readdata < 0 ) return ;
    readindex += readdata;
-   parseStart(readbuf, curindex, state, readindex, preindex);
+   parseStart();
 }
 int Parser::getResponse(){
 	//获取wtirebuf和size，这里需要shared ptr,避免数据拷贝；
 	char *psend = NULL;
 	int size = 0;
 	//本线程不会对list同时进行添加或者删除操作，不需要锁
-	Lru::getData(key,psend,size);
+	Lru::getData(key,&psend,&size);
 	sendlist.push_back({psend,size});
     return 0;
 }

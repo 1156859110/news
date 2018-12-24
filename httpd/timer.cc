@@ -1,5 +1,7 @@
 #include "common.h"
+#include "log.h"
 #include "timer.h"
+
 const int DEFAULT = 120000;//120s
 Timer::Timer(int timeout){
     preexp = getTime() + timeout;
