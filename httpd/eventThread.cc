@@ -64,9 +64,11 @@ void EventThread::addNewCon(){
 		}
 		pparser = new Parser();
 		ptimer = new Timer();
+		/*
+		But note that this is not array access; it just looks like it because std::map overloads operator[]. 
+		If you do mapping.size() afterwards, you will find that it will be 1.*/
 		//fd2pmap[fd] = {pparser,ptimer};这样为啥不行
-		//fd2pmap.insert({fd,{pparser,ptimer}});
-		 fd2pmap.emplace(fd,{ptimer,pparser}); 
+		fd2pmap[fd] = std::make_pair(ptimer,pparser);
 		newconlist.pop_front();
 	}	
 }
@@ -77,7 +79,7 @@ void EventThread::handleEvents(std::vector<struct epoll_event> &evts){
 		if(event.data.fd == rpipe){
 			addNewCon();
 		}else{
-			std::pair<Timer*, Parser* >pp = fd2pmap[event.data.fd)];
+			std::pair<Timer*, Parser* >pp = fd2pmap[event.data.fd];
 			pparser = pp.second;
 			ptimer = pp.first;
 			if(event.events & EPOLLIN){
@@ -86,7 +88,7 @@ void EventThread::handleEvents(std::vector<struct epoll_event> &evts){
 					pepoll->addOutEvents(event.data.fd);
 				}
 			}
-			if(evts[i] & EPOLLOUT){
+			if(event.events & EPOLLOUT){
 				if(pparser->sendResponse()){
 					pepoll->delOutEvents(event.data.fd);
 				}
@@ -114,29 +116,27 @@ int EventThread::setNonBlocking(int sockfd) {
 }
 
 void EventThread::delExpEvents(){
-		int time = Timer::getTime();
+	int time = Timer::getTime();
 		
-		Timer *ptimer = timerheap.getHeap();
-		Parser *pparser = NULL;
-		if(ptimer == NULL) return;
-		//最小的的都没有超时，不更新堆，直接返回。
-		if(ptimer->getPreexp() > time) return;
-		timerheap.popHeap();
-		ptimer->syncTimer();
-		if(ptimer->getCurexp() > time){
-			timerheap.pushHeap(ptimer);
-		}
-		while(ptimer->getCurexp() < time){
-			pparser = fd2pmap[ptimer->getFd()].second;
-			delete pparser;
-			fd2pmap.erase(ptimer->getFd());
-			close(ptimer->getFd());
-			delete ptimer;
-			ptimer = timerheap.getHeap();
-			timerheap.popHeap();
-		}
+	Timer *ptimer = timerheap.getHeap();
+	Parser *pparser = NULL;
+	if(ptimer == NULL) return;
+	//最小的的都没有超时，不更新堆，直接返回。
+	if(ptimer->getPreexp() > time) return;
+	timerheap.popHeap();
+	ptimer->syncTimer();
+	if(ptimer->getCurexp() > time){
+		timerheap.pushHeap(ptimer);
 	}
-	
+	while(ptimer->getCurexp() < time){
+		pparser = fd2pmap[ptimer->getFd()].second;
+		delete pparser;
+		fd2pmap.erase(ptimer->getFd());
+		close(ptimer->getFd());
+		delete ptimer;
+		ptimer = timerheap.getHeap();
+		timerheap.popHeap();
+	}
 }
 	
 	

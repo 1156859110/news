@@ -132,6 +132,7 @@ int Log::swapBuff(){
 		pf = pb;
 		pb = ptemp;
 	}	
+	return 0;
 }
 
 Log::~Log()
@@ -185,7 +186,7 @@ void Log::writeLog()
 	}
 }
 //在线程里面执行的函数不能是此有对象的，会导致参数名不一致
-static void* runLog(void *arg)
+void* runLog(void *arg)
 {
 	Log *pLog = (Log *)arg;
 	while (true){

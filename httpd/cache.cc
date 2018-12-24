@@ -6,7 +6,7 @@ ListNode *head = NULL;
 ListNode *tail = NULL;
 std::unordered_map<int, ListNode*>lrumap;
 std::mutex lrumtx;
-static void listRemove(ListNode *node){
+void listRemove(ListNode *node){
 	std::lock_guard<std::mutex> locker(lrumtx);
 	if (node -> pre != NULL){
 		node -> pre -> next = node -> next;
@@ -21,7 +21,7 @@ static void listRemove(ListNode *node){
 		tail = node -> pre;
 	}
 } 
-static void pushFront(ListNode *node){
+void pushFront(ListNode *node){
 	std::lock_guard<std::mutex> locker(lrumtx);
 	node -> next = head;
 	node -> pre = NULL;
@@ -33,7 +33,7 @@ static void pushFront(ListNode *node){
 		tail = head;
 	}
 } 
-static void getCalendar(char *data) 
+void getCalendar(char *data) 
 {
 	FILE *fp;  
 	int flen;
@@ -58,13 +58,13 @@ static void getCalendar(char *data)
 	fclose(fp);
 	return;                 
 }
-static void getData(int key,char *pdata,int size){
+void getData(int key,char **ppdata,int *psize){
 	if (lrumap.find(key) != lrumap.end()){
 		ListNode *node = lrumap[key];
 		listRemove(node);
 		pushFront(node);
-		pdata  = node->data;
-		size = 4094;
+		*ppdata  = node->data;
+		*psize = 4094;
 	}
 	else{
 		//查询数据库
@@ -81,8 +81,8 @@ static void getData(int key,char *pdata,int size){
 		getCalendar(data) ;
 		pushFront(newNode);
 		lrumap[key] = newNode;
-		pdata = data;
-		size = 4094;
+		*ppdata = data;
+		*psize = 4094;
 	}
 } 
 

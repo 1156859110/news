@@ -22,7 +22,7 @@ public:
    static void listRemove(ListNode *node);
    static void pushFront(ListNode *node);
    static void getCalendar(char *data) ;
-   static char *getData(int key);
+   static void getData(int key,char **ppdata,int *psize);
  
 };
 #endif

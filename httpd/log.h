@@ -64,13 +64,14 @@ public:
 		level = lev;
 		return 0;
 	}
+	static void* runLog(void *arg);
 	static void threadCreate(){
 		std::cout<<"befor construct"<<std::endl;
 		pthread_create(&(getLog().tid), NULL,Log::runLog, (void*)&getLog());
 		std::cout<<"after construct"<<getLog().tid<<std::endl;
 	}
 	 ~Log();
-	 static void* runLog(void *arg);
+	
 };
 #define LOG_DEBUG if(Log::getLevel() >= DEBUG)\
     Log::getLog()<<__FILE__<<__LINE__<<Log::getTimeVal()
