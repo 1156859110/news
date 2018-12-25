@@ -11,7 +11,7 @@ Epoll::~Epoll(){
 std::vector<struct epoll_event> Epoll::epollWait(int waittime){
 	std::cout<<evts.size()<<" events size"<<std::endl; 
 	//&*events.begin() 
-	int num = epoll_wait(epfd,&*evts.begin(),(int)evts.size(),waittime);
+	int num = epoll_wait(epfd,&evts[0],(int)evts.size(),waittime);
 	std::vector<struct epoll_event>v(&evts[0],&evts[0]+num);
 	std::cout<<num<<" active events"<<std::endl; 
 	LOG_DEBUG<<num<<" active events"; 

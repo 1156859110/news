@@ -13,7 +13,7 @@ threadnum(get_nprocs()*1.5),bdestroy(false),tid(threadnum,0),
 pevtthrd(new EventThread *[threadnum]),count(0){
 	for(int i = 0; i < threadnum; ++i){
 		pevtthrd[i] = new EventThread();
-		pthread_create(&tid[i], NULL, pevtthrd[i]->runEvent, NULL);
+		pthread_create(&tid[i], NULL, pevtthrd[i]->runEvent,pevtthrd[i]);
 	}		
 }
 ThreadPool::ThreadPool(int tnum):
