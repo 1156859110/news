@@ -1,5 +1,6 @@
 #include "common.h"
 #include "log.h"
+#include "cache.h"
 #include "timer.h"
 #include "epoll.h"
 #include "parser.h"

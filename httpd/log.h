@@ -21,9 +21,9 @@ private:
 	std::mutex mLock;
 	
    	static int level;
-	pthread_t tid;
+	
 public:
-  
+  static pthread_t tid;
     Log &operator<<(bool);
 
     Log &operator<<(unsigned char);
@@ -48,8 +48,7 @@ public:
 		pb(new char[bufsize]),
 		losnum(0),
 		bindex(0),
-		findex(0),
-		tid(0)
+		findex(0)
 	{
 	}
 	static Log& getLog();
@@ -65,11 +64,7 @@ public:
 		return 0;
 	}
 	static void* runLog(void *arg);
-	static void threadCreate(){
-		std::cout<<"befor construct"<<std::endl;
-		pthread_create(&(getLog().tid), NULL,Log::runLog, (void*)&getLog());
-		std::cout<<"after construct"<<getLog().tid<<std::endl;
-	}
+	static void threadCreate();
 	 ~Log();
 	
 };

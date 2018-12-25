@@ -23,7 +23,6 @@ public:
    static void pushFront(ListNode *node);
    static void getCalendar(char *data) ;
    static void getData(int key,char **ppdata,int *psize);
- 
 };
 #endif
 

@@ -1,12 +1,12 @@
 #include "common.h"
 #include "cache.h"
-int cachesize = 30000000;//30M
-int cursize = 0;
-ListNode *head = NULL;
-ListNode *tail = NULL;
-std::unordered_map<int, ListNode*>lrumap;
-std::mutex lrumtx;
-void listRemove(ListNode *node){
+int Lru::cachesize = 30000000;//30M
+int Lru::cursize = 0;
+ListNode * Lru::head = NULL;
+ListNode * Lru::tail = NULL;
+std::unordered_map<int, ListNode*>Lru::lrumap;
+std::mutex Lru::lrumtx;
+void Lru::listRemove(ListNode *node){
 	std::lock_guard<std::mutex> locker(lrumtx);
 	if (node -> pre != NULL){
 		node -> pre -> next = node -> next;
@@ -21,7 +21,7 @@ void listRemove(ListNode *node){
 		tail = node -> pre;
 	}
 } 
-void pushFront(ListNode *node){
+void Lru::pushFront(ListNode *node){
 	std::lock_guard<std::mutex> locker(lrumtx);
 	node -> next = head;
 	node -> pre = NULL;
@@ -33,7 +33,7 @@ void pushFront(ListNode *node){
 		tail = head;
 	}
 } 
-void getCalendar(char *data) 
+void Lru::getCalendar(char *data) 
 {
 	FILE *fp;  
 	int flen;
@@ -58,7 +58,7 @@ void getCalendar(char *data)
 	fclose(fp);
 	return;                 
 }
-void getData(int key,char **ppdata,int *psize){
+void Lru::getData(int key,char **ppdata,int *psize){
 	if (lrumap.find(key) != lrumap.end()){
 		ListNode *node = lrumap[key];
 		listRemove(node);

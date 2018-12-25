@@ -3,6 +3,7 @@
 #include "log.h"
 
 int Log::level = 0;
+pthread_t Log::tid = 0;
 static const char digits[] = "9876543210123456789";
 static const char *zero = digits + 9;
 template <typename T>
@@ -186,7 +187,7 @@ void Log::writeLog()
 	}
 }
 //在线程里面执行的函数不能是此有对象的，会导致参数名不一致
-void* runLog(void *arg)
+void* Log::runLog(void *arg)
 {
 	Log *pLog = (Log *)arg;
 	while (true){
@@ -195,8 +196,13 @@ void* runLog(void *arg)
 		//std::cout<<"sleep 2"<<std::endl;
 		pLog->writeLog();
 	}
+	return NULL;
 }
-
+void Log::threadCreate(){
+	std::cout<<"befor construct"<<std::endl;
+	pthread_create(&(Log::getLog().tid), NULL,Log::runLog, (void*)&Log::getLog());
+	std::cout<<"after construct"<< Log::getLog().tid<<std::endl;
+}
 
 
 

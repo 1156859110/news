@@ -56,7 +56,7 @@ int Dispatch::bindListen(){
 Dispatch::Dispatch(ThreadPool* pool):port(80),pthrdpool(pool){
 	bindListen();
 	setNonBlocking(listenfd);   
-	pepoll = new Epoll(listenfd);             
+	pepoll = new Epoll(listenfd);    
 }
 Dispatch::~Dispatch(){ 
 	close(listenfd);  
@@ -69,6 +69,7 @@ void Dispatch::runDispatch(){
 	struct sockaddr_in clientaddr;
 	EventThread *pevthrd = NULL;
 	int connfd = 0;
+	std::cout<<"run dispatch "<<pepoll<<std::endl;
 	 while(true){
 		 pepoll->epollWait(-1);
 		 while((connfd=accept(listenfd,(struct sockaddr*)&clientaddr, &clientlen)) > 0){

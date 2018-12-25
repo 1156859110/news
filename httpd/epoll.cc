@@ -9,7 +9,9 @@ Epoll::~Epoll(){
 	delInEvents(rpipe);
 }
 std::vector<struct epoll_event> Epoll::epollWait(int waittime){
-	int num = epoll_wait(epfd,&evts[0],evts.size(),waittime);
+	std::cout<<evts.size()<<" events size"<<std::endl; 
+	//&*events.begin() 
+	int num = epoll_wait(epfd,&*evts.begin(),(int)evts.size(),waittime);
 	std::vector<struct epoll_event>v(&evts[0],&evts[0]+num);
 	std::cout<<num<<" active events"<<std::endl; 
 	LOG_DEBUG<<num<<" active events"; 
@@ -20,6 +22,8 @@ int Epoll::addInEvents(int fd){
 	struct epoll_event ev;
 	ev.data.fd = fd;
 	ev.events = EPOLLIN;
+	std::cout<<"add epoll"<<std::endl;
+	evts.push_back(ev);
 	if((rc = epoll_ctl(epfd,EPOLL_CTL_ADD,fd,&ev)) < 0){
 		 LOG_ERROR<<"add in epoll error";
 	}     
@@ -30,6 +34,8 @@ int Epoll::delInEvents(int fd){
 	struct epoll_event ev;
 	ev.data.fd = fd;
 	ev.events = EPOLLIN;
+	//todo 这里需要释放空间
+	//evts.push_back(0);
 	if((rc = epoll_ctl(epfd,EPOLL_CTL_DEL,fd,&ev)) < 0){
 		 LOG_ERROR<<"epoll in del error";
 	}     
