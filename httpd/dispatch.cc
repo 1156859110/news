@@ -72,6 +72,7 @@ void Dispatch::runDispatch(){
 	std::cout<<"run dispatch "<<pepoll<<std::endl;
 	 while(true){
 		 pepoll->epollWait(-1);
+		  std::cout << "new thread pool " << pthrdpool<< std::endl;
 		 while((connfd=accept(listenfd,(struct sockaddr*)&clientaddr, &clientlen)) > 0){
 			 std::cout << "new connection fd " << connfd<< std::endl;
 			 LOG_DEBUG << "new connection fd " <<connfd;
@@ -79,6 +80,7 @@ void Dispatch::runDispatch(){
 			 pevthrd =  pthrdpool->getEventThread();
 			 pevthrd->addConList(connfd);
 		 }	
+		
 		pthrdpool->notify();
 	 }                              
 }

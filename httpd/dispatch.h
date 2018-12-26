@@ -1,6 +1,5 @@
 #ifndef _DISPATCH_H_
-#define _DISPATCH_H_
-void *runDispatch(void *arg);
+#define _DISPATCH_H
 class Dispatch{
 private:
 	int port;

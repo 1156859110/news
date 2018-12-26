@@ -75,22 +75,24 @@ void EventThread::addNewCon(){
 void EventThread::handleEvents(std::vector<struct epoll_event> &evts){
 	Timer *ptimer = NULL;
 	Parser *pparser = NULL;
-	for(auto event:evts){
-		if(event.data.fd == rpipe){
+	int size = evts.size();
+	if(size == 0) return;
+	for(int i = 0;i < size;i++){
+		if(evts[i].data.fd == rpipe){
 			addNewCon();
 		}else{
-			std::pair<Timer*, Parser* >pp = fd2pmap[event.data.fd];
+			std::pair<Timer*, Parser* >pp = fd2pmap[evts[i].data.fd];
 			pparser = pp.second;
 			ptimer = pp.first;
-			if(event.events & EPOLLIN){
+			if(evts[i].events & EPOLLIN){
 				pparser->readRequest();
 				if(!pparser->sendResponse()){
-					pepoll->addOutEvents(event.data.fd);
+					pepoll->addOutEvents(evts[i].data.fd);
 				}
 			}
-			if(event.events & EPOLLOUT){
+			if(evts[i].events & EPOLLOUT){
 				if(pparser->sendResponse()){
-					pepoll->delOutEvents(event.data.fd);
+					pepoll->delOutEvents(evts[i].data.fd);
 				}
 			}
 			ptimer->updateTimer();

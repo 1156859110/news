@@ -53,7 +53,7 @@ void serverInit()
 {
 	Log::setLevel(ERROR);
 	Log::threadCreate();
-	ThreadPool pool;
+	ThreadPool pool();
 	Dispatch dispatch(&pool);
 	dispatch.runDispatch();
 }
