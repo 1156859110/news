@@ -17,18 +17,17 @@ class Parser
 		int state;
 		char *readbuf;
 		char *writebuf;
-		char wbufsize;
+		int wbufsize;
 		int writeindex;
 		std::list<std::pair<char *,int>>sendlist;
 	public:
-		Parser();
+		Parser(int ifd);
 		~Parser();
 		int parseLine();
 		int parseReqline(char *pbuf);
 		int parseHeaders(char *pbuf);
 		int parseContent();
 		int parseStart();
-      int parser(); 
 	  
 	  void readRequest();
 	  int getResponse();

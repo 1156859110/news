@@ -8,8 +8,8 @@ private:
 	int curexp;
 	int fd;
 public:
-	Timer(int timeout);
-	Timer();
+	Timer(int ifd,int timeout);
+	Timer(int ifd);
 	~Timer();
 	void updateTimer(int timeout);
 	void updateTimer();

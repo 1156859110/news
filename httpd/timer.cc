@@ -3,11 +3,11 @@
 #include "timer.h"
 
 const int DEFAULT = 120000;//120s
-Timer::Timer(int timeout){
+Timer::Timer(int ifd,int timeout):fd(ifd){
     preexp = getTime() + timeout;
 	curexp = preexp;
 }
-Timer::Timer(){
+Timer::Timer(int ifd):fd(ifd){
     preexp = getTime() + DEFAULT;
 	curexp = preexp;
 }
@@ -42,11 +42,12 @@ int Timer::getFd() const{
 }
 
 Timer* TimerHeap::getHeap(){
-	return timerheap.top();
+	return (timerheap.empty() == NULL)? NULL : timerheap.top();
 }
 void TimerHeap::pushHeap(Timer *ptimer){
 	timerheap.push(ptimer);
 }
 void TimerHeap::popHeap(){
+	if(!timerheap.empty())
 		timerheap.pop();
 }
