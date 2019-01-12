@@ -148,7 +148,7 @@ int Parser::parseStart(){
 	return 0;
 }
 
-void Parser::readRequest(){
+int Parser::readRequest(){
 	if(readindex == BUFSIZE){
 		memmove(readbuf,readbuf+preindex,BUFSIZE - preindex);
 		memset(readbuf + BUFSIZE - preindex,0,preindex);
@@ -157,8 +157,9 @@ void Parser::readRequest(){
 		preindex = 0;
 	}
    int readdata = read(fd, readbuf + readindex,  BUFSIZE - readindex);
-   if(readdata <= 0 ) return ;
-   //todo返回为0，说明连接关闭。
+   //返回为0，说明连接关闭。
+   if(readdata <= 0 ) return readdata;
+   
    readindex += readdata;
    readbuf[readindex] = '\0';
    std::cout<<readdata<<" data read to buff "<<readbuf<<std::endl;

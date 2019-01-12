@@ -79,7 +79,7 @@ void EventThread::handleEvents(std::vector<struct epoll_event>& evts){
 	Timer *ptimer = NULL;
 	Parser *pparser = NULL;
 	int size = evts.size();
-	
+	bool bdelflag = false;
 	if(size == 0) return;
 	for(int i = 0;i < size;i++){
 		if(evts[i].data.fd == rpipe){
@@ -91,7 +91,17 @@ void EventThread::handleEvents(std::vector<struct epoll_event>& evts){
 			ptimer = pp.first;
 			if(evts[i].events & EPOLLIN){
 				std::cout<<" read in"<<std::endl;
-				pparser->readRequest();
+				if(pparser->readRequest() <=0) {
+					//说明连接已经关闭，这里置为过期，统一删除。
+					ptimer->setTimeout();
+					if(!bdelflag){
+						bdelflag = true;
+						Timer *ptemp = timerheap.getHeap();
+						timerheap.popHeap();
+						timerheap.pushHeap(ptemp);
+					}
+					continue;
+				}
 				pparser->getResponse();
 				if(!pparser->sendResponse()){
 					pepoll->addOutEvents(evts[i].data.fd);
@@ -107,7 +117,7 @@ void EventThread::handleEvents(std::vector<struct epoll_event>& evts){
 		}
 		
 	}
-	//delExpEvents();
+	delExpEvents();
 	std::cout<<" heap over"<<std::endl;
 }
 
@@ -131,8 +141,8 @@ void EventThread::delExpEvents(){
 		
 	Timer *ptimer = timerheap.getHeap();
 	Parser *pparser = NULL;
-	std::cout<<"update heap "<<ptimer->getCurexp()<<std::endl;
 	if(ptimer == NULL) return;
+	std::cout<<"update heap "<<ptimer->getCurexp()<<std::endl;
 	
 	//最小的的都没有超时，不更新堆，直接返回。
 	if(ptimer->getPreexp() > time) return;

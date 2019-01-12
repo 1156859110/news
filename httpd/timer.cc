@@ -30,6 +30,10 @@ void Timer::updateTimer(){
 void Timer::syncTimer(){
 	preexp = curexp;
 }
+void Timer::setTimeout(){
+	curexp = 0;
+	preexp = 0;
+}
 
 int Timer::getCurexp() const{
 	return curexp;

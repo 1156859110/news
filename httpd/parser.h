@@ -29,7 +29,7 @@ class Parser
 		int parseContent();
 		int parseStart();
 	  
-	  void readRequest();
+	  int readRequest();
 	  int getResponse();
 	  bool sendResponse();
 };
