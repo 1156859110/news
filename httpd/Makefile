@@ -9,7 +9,7 @@ CFLAGS  := -std=c++11 -g -Wall
 CXXFLAGS	:= $(CFLAGS)
 LIBNEWS     = libnew.a
 $(TARGET):$(OBJS)
-	g++	$(CXXFLAGS) -o $(TARGET)	$(OBJS) -lrt $(LIBS)
+	g++	  -I/usr/include/mysql -l/usr/lib64/mysql -lmysqlclient $(CXXFLAGS) -o $(TARGET)	$(OBJS) -lrt $(LIBS)
 clean:
 	-rm -f news
 

@@ -5,7 +5,7 @@ const char HOST[] = "65.49.226.144" ;
 const char USER[] = "root" ;
 const char PWD[] = "news/123" ;
 const char DBNAME[] = "news" ;
-const char PORT = 3306;
+const int PORT = 3306;
 MysqlDb::MysqlDb():mysql(NULL),row(NULL),result(NULL){
   mysql = mysql_init(NULL);
   if(mysql == NULL) std::cout << "Error: " << mysql_error(mysql);   
@@ -27,8 +27,8 @@ bool MysqlDb::init(){
 }
  
 char* MysqlDb::queryArticle(unsigned int key){
-	string sql("SELECT article FROM newstable WHERE id = ");
-	sql += to_string(key);
+	std::string sql("SELECT article FROM newstable WHERE id = ");
+	sql += std::to_string (key);
 	//返回0表示成功。
 	if(mysql_query(mysql,sql.c_str())){
 		std::cout << "query fail: " << mysql_error(mysql)<<std::endl;  
@@ -44,11 +44,11 @@ char* MysqlDb::queryArticle(unsigned int key){
 }
 char* MysqlDb::queryTitle(unsigned int key)
 {
-	string sql("SELECT title,date FROM newstable WHERE id > ");
-	sql += to_string(key);
+	std::string sql("SELECT title,date FROM newstable WHERE id > ");
+	sql += std::to_string (key);
 	
 	if(mysql_query(mysql,sql.c_str())){
-		cout << "query fail: " << mysql_error(mysql);   
+		std::cout << "query fail: " << mysql_error(mysql);   
 		return NULL;                                          
 	}
 	else{

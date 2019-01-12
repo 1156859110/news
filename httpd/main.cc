@@ -7,6 +7,7 @@
 #include "eventThread.h"
 #include "threadPool.h"
 #include "dispatch.h"
+#include "mysqlDb.h"
 
 void daemonize(void (*function)())
 {
@@ -53,13 +54,22 @@ void serverInit()
 {
 	Log::setLevel(ERROR);
 	Log::threadCreate();
-	ThreadPool pool();
+	ThreadPool pool(1);
 	Dispatch dispatch(&pool);
 	dispatch.runDispatch();
 }
 int main() 
 {
 	//daemonize(serverInit());
+	MysqlDb my;
+	if(my.init()){
+		std::cout<<"ok"<<std::endl;
+		my.queryArticle(10);
+	}
+	else{
+		std::cout<<"error"<<std::endl;
+	}
 	serverInit();
+	
 	return 0;
 }

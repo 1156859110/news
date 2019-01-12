@@ -14,6 +14,7 @@ public:
 	void updateTimer(int timeout);
 	void updateTimer();
 	void syncTimer();
+	void setTimeout();
 	int getCurexp() const;
 	int getPreexp() const;
 	int getFd() const;
