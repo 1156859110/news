@@ -4,9 +4,10 @@
 class ListNode {
 public:
   int key;     
-  char *data;   
+  char *pdata; 
+  int psize;  
   ListNode *pre, *next; 
-  ListNode(int k,char *d):key(k),data(d){};
+  ListNode(int k,char *d,int size):key(k),data(d),psize(size){};
   //~ListNode();
 }; 
 
@@ -18,7 +19,9 @@ private:
 	static int cachesize;
 	static std::mutex lrumtx;
 	static int cursize;
+	static std::vector<std::pair<char*,int >>vtitle;
 public:
+	
    static void listRemove(ListNode *node);
    static void pushFront(ListNode *node);
    static void getCalendar(char *data) ;
