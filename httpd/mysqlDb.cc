@@ -26,7 +26,7 @@ bool MysqlDb::init(){
 	return true;
 }
  
-char* MysqlDb::queryArticle(){
+std::string MysqlDb::queryArticle(){
 	std::string sql("SELECT article FROM newstable WHERE id = ");
 	sql += std::to_string (key);
 	//返回0表示成功。
@@ -37,11 +37,12 @@ char* MysqlDb::queryArticle(){
 	else{
 		result = mysql_store_result(mysql);
 		row = mysql_fetch_row(result);
-		char *particle = new char[row[0].size()];
-		strcpy(particle,row[0]);
-		std::cout << row[0]<< row[0].size()<<std::endl;
+		std::string str;
+		str += row[0];
+		//strcpy(particle,row[0]);
+		std::cout << row[0]<<" "<< row[0].size()<<std::endl;
 		mysql_free_result(result);
-		return particle;
+		return str;
 	}
 }
 std::unordered_map<int, Sdbtable> MysqlDb::queryTitle()
@@ -67,7 +68,8 @@ std::unordered_map<int, Sdbtable> MysqlDb::queryTitle()
 			sdb.bimg = row[2];
 			strncpy(sdb.pubdate,row[3],9);
 			sdb.pubdate[9] = '\0';
-			sdb.article = NULL;
+			sdb.particle = NULL;
+			sdb.pimg = NULL;
 			dbmap[sdb.id] = sdb;
 		}
 		mysql_free_result(result);

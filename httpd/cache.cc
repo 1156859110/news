@@ -1,184 +1,227 @@
 #include "common.h"
 #include "cache.h"
 int Lru::cachenum = 100;//存放最近100条数据
-int Lru::cursize = 0;
-ListNode * Lru::head = NULL;
-ListNode * Lru::tail = NULL;
-std::unordered_map<int, ListNode*>Lru::lrumap;
+int Lru::curid = 0;
+int visitors = 12323;
+std::unordered_map<std::string, Sdbtable>newsmap;
 std::mutex Lru::lrumtx;
 
-std::vector<pair<char *,int>>Lru::vtitle(40000);
 const int PAGESIZE = 10;
 enum EKEYTYPE{
-	EIMG = 0;
-	ETITLE;
+	EDEFAULT = 0;
+	EIMG;
 	EARTICLE;
 	EPAGE;
 }
-//mapA.insert(mapB.begin(), mapB.end())
-void Lru::listRemove(ListNode *node){
-	std::lock_guard<std::mutex> locker(lrumtx);
-	if (node -> pre != NULL){
-		node -> pre -> next = node -> next;
-	}
-	else{
-		head = node -> next;
-	}
-	if (node -> next != NULL){
-		node -> next -> pre = node -> pre;
-	}
-	else{
-		tail = node -> pre;
-	}
-} 
-void Lru::pushFront(ListNode *node){
-	std::lock_guard<std::mutex> locker(lrumtx);
-	node -> next = head;
-	node -> pre = NULL;
-	if (head != NULL){
-		head -> pre = node;
-	}
-	head = node;
-	if (tail == NULL){
-		tail = head;
-	}
-} 
-void Lru::getCalendar(char *data) 
-{
-	FILE *fp;  
-	int flen;
-	if((fp = fopen("calendar.html", "r")) == 0)
-	{
-		std::cout<<"open failed!"<<std::endl;
-	}
-	fseek(fp, 0L, SEEK_END);
-	flen = ftell(fp);
-	rewind(fp);
-	
-	std::string reply;
-	reply += "HTTP/1.1 200 OK\r\n";    
-	reply += "Server: husk's news server\r\n";
-	reply += "Content-length:   "+ std::to_string(flen)  + " \r\n";
-	reply += "Content-Type: text/html\r\n";
-	reply += "Connection: Keep-Alive\r\n\r\n";
-	strncpy(data,reply.c_str(),reply.size());
-	std::cout<<flen<<" flen!"<<std::endl;
-	fread(data + reply.size(), 1, flen , fp);
-	fclose(fp);
-	return;                 
-}
-void Lru::decodeSkey(std::string skey,unsigned int &ukey,EKEYTYPE &etype){
-	string ktemp = skey.substr(2,skey.size()-3);
-	
-	if(memcmp(skey.ctr(),img,3) == 0){
+std::lock_guard<std::mutex> locker(lrumtx);
+//mapA.insert(mapB.begin(), mapB.end()) b里面的元素不会更新a
+int Lru::decodeSkey(std::string &skey,EKEYTYPE &etype){
+	int size = skey.size();
+	if(size ==0) return 0;
+	if(memcmp(skey.ctr(),"img",3) == 0){
 		etype = EIMG;
-	}else if(memcmp(skey.ctr(),pag,3) == 0){
+	}else if(memcmp(skey.ctr(),"pag",3) == 0){
 		etype = EPAGE;
-	}else if(memcmp(skey.ctr(),tit,3) == 0){
-		etype = ETITLE;
-	}else if(memcmp(skey.ctr(),art,3) == 0){
+	}else if(memcmp(skey.ctr(),"art",3) == 0){
 		etype = EARTICLE;
 	}else{
+		etype =  EDEFAULT;
 		std::cout<<"error type"<<std::endl;
 	}
-	  ukey = std::stoul(ktemp,nullptr,0);
-	  std::cout << ukey <<" keys: type"<< etype<< '\n';
+	std::cout <<" keys: type"<< etype<< '\n';
+	return 0;
 }
-std::vector<std::pair<char *,int size>> Lru::getPage(unsigned int key){
-	
-	std::vector<std::pair<char *,int size>>v;
-	int size = vtitle.size();
-	if(size == 0){
-		//查数据库
-	}
-	int start = size - PAGESIZE * key -1;
-	if(start < 0) start = 0;
-	int i = 0;
-	while(start < size && i < PAGESIZE){
-		v.push_back([vtitle[start]);
-		++start;
-		++i;
-	}
-	return v;
-} 
-std::vector<std::pair<char *,int size>> Lru::getArticle(unsigned int key){
-	
-	std::vector<std::pair<char *,int size>>v;
-	if (lrumap.find(key) != lrumap.end()){
-		ListNode *node = lrumap[ukey];
-		listRemove(node);
-		pushFront(node);
-		v.push_back({node->pdata,node->psize});
-	}
-	else{
-		//查询数据库
-		char *pdata;
-		ListNode *newNode = new ListNode(ukey, data);
-		MysqlDb db(ukey);
-		if(!db.init()){
-			//send busy;
+
+
+
+std::pair<char *,int> Lru::getImg(std::string &skey){
+	std::vector<std::pair<char *,int>>v;
+	Sdbtable stab = newsmap[skey];
+	if(!stab.bimg) return v;
+	if(newsmap[skey].pimg == NULL){
+		FILE *fp;  
+		int flen;
+		if((fp = fopen(skey, "r")) == 0){
+			std::cout<<"open failed!"<<std::endl;
 		}
-		pdata = db.queryArticle();
-		
-		if (cursize >= cachesize){
-			ListNode *node = tail;
-			listRemove(node);
-			lrumap.erase(node->key);
-			delete node->data;
-			delete node;
-		}
-		pushFront(newNode);
-		lrumap[key] = newNode;
+		fseek(fp, 0L, SEEK_END);
+		flen = ftell(fp);
+		rewind(fp);
+		std::string header;
+		header += "HTTP/1.1 200 OK\r\nServer: husk's news server\r\n";
+		header += "Content-length:   "+ std::to_string(flen)  + " \r\n";
+		header += "Content-Type: image/jpg\r\nConnection: Keep-Alive\r\n\r\n";
+		int size = header.size();
+		char *pimg = new char[flen + size]();
+		strncpy(pimg,header.c_str(),size);
+		std::cout<<flen<<" flen!"<<std::endl;
+		fread(pimg + size, 1, flen, fp);
+		fclose(fp);   
+		return  {pimg,flen+size}; 
+	}else{
+		return {newsmap[skey].pimg,newsmap[skey].imglen};
 	}
-	return v;
 } 
-std::vector<std::pair<char *,int size>> Lru::getCache(std::string skey){
+
+std::vector<std::pair<char *,int size>> Lru::getHtml(std::string &skey){
 	
-	unsigned int ukey = 0;
-	EKEYTYPE etype = 0;
-	decodeSkey(skey,ukey,etype);
-	std::vector<std::pair<char *,int size>>v;
-	
+	EKEYTYPE etype = EDEFAULT;
+	decodeSkey(skey,etype);
+	std::vector<std::pair<char *,int>>v;
 	if(etype == EPAGE){
 		
 	}
-	else if(){
-		
+	else if(etype == EIMG){
+		 Lru::getImg(skey);
 	}
-	else if(){
-		
+	else if(etype == EARTICLE){
+		Lru::getArticle(skey,key);
 	}
 	else{
-		
+		 Lru::getImg(skey);
 	}
 	
 	return v;
 } 
 
-void getHomePage(char *data,char *src,int len) 
+std::string getHeader(int len) 
 {
-	std::string reply;
-	reply += "HTTP/1.1 200 OK\r\n";    
-	reply += "Server: husk's news server\r\n";
-	reply += "Content-length:   "+ std::to_string(len)  + " \r\n";
-	reply += "Content-Type: text/html\r\n\r\n";
-	reply += "Connection: Keep-Alive\r\n";
-	strcpy(data,reply.c_str());
-	strncpy(data+reply.size(),src,len) ;   
-	return;                 
+	std::string header;
+	header += "HTTP/1.1 200 OK\r\n";    
+	header += "Server: husk's news server\r\n";
+	header += "Content-length:   "+ std::to_string(len)  + " \r\n";
+	header += "Content-Type: text/html\r\n\r\n";
+	header += "Connection: Keep-Alive\r\n";
+	return header;                 
 }
-void notFind(char **p,int *plen) 
+std::string getErr(char **p,int *plen) 
 {
-	char data[] = "HTTP/1.1 404 not find\r\n
-		Server: husk's news server\r\n
-		Content-length: 0 \r\n
-		Content-Type: text/html\r\n\r\n";
-	*plen = sizeof(data)+1;
-    **pp = new char[*plen]();  
-	memcpy(*pp,data,*plen);  
-	*pp[*plen]  = '\0';           
-   return;                 
+	std::string err;
+	err += "HTTP/1.1 404 OK\r\n";    
+	err += "Server: husk's news server\r\n";
+	err += "Content-length: 0 \r\n";
+	err += "Content-Type: text/html\r\n\r\n";
+	return err;                           
 }
+std::string getSection1() {
+	 std::string s1;
+	 s1 +="  <!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\"> ";									
+	 s1 +=" <html xmlns=\"http://www.w3.org/1999/xhtml\"><head><meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\" />";
+	 s1 +=" <title>看客</title><meta name=\"keywords\" content=\"中港台新闻\" /><meta name=\"description\" content=\"中国，香港，台湾相关的新闻\" />";
+	 s1 +=" <link href=\"index.css\" rel=\"stylesheet\" type=\"text/css\" /></head><body><div id=\"header\"><div id=\"title\">看客</div>";
+	 s1 +=" </div><div id=\"menu\"><a href=\"http://www.kanketech.site\" target=\"_parent\">主页</a></div><div id=\"content_bg\"><div id=\"content\"><div class=\"section_w620 fl\">";
+ 	return s1;                 
+}
+std::string Lru::getSection2Page(int key){
+	std::string s2;
+	s2 += " <div class=\"title_header\">最新动态</div><div class=\"seperate\"></div><ul class=\"list_url\">";
+	if(curid == 0){
+		MysqlDb db = new MysqlDb(0);
+		if(!db.init()){
+			//send busy;
+		}
+		//需要枷锁,curid,不能用size，后续需要改动
+		newsmap = db.queryTitle();
+		curid = newmap.size();
+		delete db;
+	}
+	int start = curid - PAGESIZE * key -1;
+	if(start < 0) start = 0;
+	int i = 0;
+	while(start < size && i < PAGESIZE){
+		Sdbtable stab = newsmap[std::to_string(start)];
+		s2+= "<li><a href=\"art";
+		s2+= stab.id;
+		s2+= "\">";
+		s2+= stab.title;
+		s2+= "</a> <span>";
+		s2+= stab.pubdate;
+		s2+= "</span></li>";
+		++start;
+		++i;
+	}
+	s2+=" <div class=\"cleaner\"></div></ul><div class=\"seperate\"></div><div class= \"fr\" > <p>页次：";
+	s2+=std::to_string(key)+"/"+std::to_string(curid/10);
+	if(key >= 1){
+		s2+= "<a href=\" "+std::to_string(key-1)+ "\"><<</a>";
+	}
+	s2+= std::to_string(key);
+	s2+= "<a href=\" " + std::to_string(key+1)+ "\">>></a></p></div>";
+	return s2;
+} 
+std::string Lru::getSection2Article(std::string &skey){
+	Sdbtable stab = newsmap[skey];
+	std::string s2,stemp;
+	s2 += " <div class=\"title_header\">";
+	s2 +=  stab.title;
+	s2 +=  "</div>";
+	if(stab.bimg){
+		s2 += "<div class=\"article_image fr\"> <img src=\"images/";
+		s2 += std::to_string(stab.id);
+		s2 += ".jpg\" alt=\"image\" width=\"300\" height=\"200\" /></div>";
+	}
+	s2 += "<p>";
+	if(newsmap[skey].particle == NULL){
+		MysqlDb db = new MysqlDb(stab.id);
+		if(!db.init()){
+			//send busy;
+		}
+		stemp = db.queryArticle();
+		delete db;
+	}else{
+		stemp = newsmap[skey].particle;
+	}
+	s2 += stemp;
+	s2 += "</p>"
+	return s2;
+} 
+std::string getSection3() {
+	 std::string s3;
+	 
+	 s3 += "<div class=\"margin_bottom_40\"></div> <div class=\"section_320 fl margin_right_40\">";
+	 s3 += " </div><div class=\"cleaner\"></div></div><div class=\"section_w250 fr\"> ";
+	 s3 += "  <div class=\"section_w250_title hot_news_title\">热度排行</div>";
+	 s3 += "<div class=\"w250_content\"><div class=\"latest_news\"><ul class=\"list_url\">";
+	 s3 += "<li><a href=\" ";
+	 int title = 10;
+	 //todo待计算排名前5的数据
+	 s3 += std::to_string(title);
+	 s3 += "\">";
+	 s3 += std::to_string(title);
+	 s3 += " </a></li></ul></div></div><div class=\"margin_bottom_20\"></div>";
+	 s3 += " <div class=\"section_w250_title visitor_title\">访问统计</div> <div class=\"w250_content\">";
+}
+ 
+std::string getSection4() {
+	std::string s4;
+	s4 += " <div class=\"title_header\" align = center>";
+	s4 += std::to_string(visitors);
+	s4 += "</div></div><div class=\"margin_bottom_20\"></div> ";
+	s4 += "</div><div class=\"margin_bottom_20\"></div></div></div><div id=\"footer_bg\">";
+	s4 += "  <div id=\"footer\"> <a href=\"http://www.miitbeian.gov.cn\">浙ICP备19004077</a> |  Designed by wl";
+	s4 += "</div></body></html>";
+	return s4;                 
+}
+
+		   
+				   
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
