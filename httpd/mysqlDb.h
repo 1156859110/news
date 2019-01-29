@@ -5,10 +5,14 @@
 
 typedef struct {
 	int id;
+	int artlen;
+	int imglen;
+	int cnt;
 	char title[50];
 	bool bimg;
 	char pubdate[10];
-	char *article;
+	char *particle;
+	char *pimg;
 }Sdbtable;
 
 
@@ -16,11 +20,11 @@ class MysqlDb
 { 
 public:
 	MysqlDb();
+	MysqlDb(int curid);
 	~MysqlDb();
-	bool init(); 
-                    
-	char* queryArticle();
-	char* queryTitle();
+	bool init();         
+	std::string queryArticle();
+	std::unordered_map<std::string, Sdbtable>  queryTitle();
 private:
 	unsigned int key;      
 	MYSQL* mysql;

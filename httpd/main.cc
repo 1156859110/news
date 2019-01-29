@@ -61,14 +61,14 @@ void serverInit()
 int main() 
 {
 	//daemonize(serverInit());
-	MysqlDb my;
-	if(my.init()){
-		std::cout<<"ok"<<std::endl;
-		my.queryArticle(10);
-	}
-	else{
-		std::cout<<"error"<<std::endl;
-	}
+	// MysqlDb my;
+// 	if(my.init()){
+// 		std::cout<<"ok"<<std::endl;
+// 		my.queryArticle(10);
+// 	}
+// 	else{
+// 		std::cout<<"error"<<std::endl;
+// 	
 	serverInit();
 	
 	return 0;

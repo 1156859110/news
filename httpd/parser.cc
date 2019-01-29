@@ -26,7 +26,7 @@ const int BUFSIZE = 1024;
 
 Parser::Parser(int ifd):fd(ifd),writeindex(0),wbufsize(0),readindex (0),curindex (0),preindex (0),
 state(REQUEST),readbuf(new char[BUFSIZE]),writebuf(NULL),contentlen(0),method("UNKNOWN"),
-version("UNKNOWN"),key(0),contenttype("UNKNOWN"){
+version("UNKNOWN"),skey(NULL),contenttype("UNKNOWN"){
 	memset(readbuf,0,sizeof(BUFSIZE));
 };
 
@@ -64,10 +64,10 @@ int Parser::parseReqline(char *pbuf)
 	std::cout<<"method is"<<method<<std::endl;
 	pbuf += 2;
 	while(pbuf[0] != ' '){
-		key += key*10 + pbuf[0]-'0';
+		skey += pbuf[0];
 		++pbuf;
 	}
-	std::cout<<"key is"<<key<<std::endl;
+	std::cout<<"skey is"<<skey<<std::endl;
 	++pbuf;//指向httpversion
     if (strncasecmp(pbuf, "HTTP/1.1" ,8) == 0 ){
     	version = "HTTP/1.1";
@@ -166,24 +166,25 @@ int Parser::readRequest(){
    parseStart();
 }
 int Parser::getResponse(){
-	//获取wtirebuf和size，这里需要shared ptr,避免数据拷贝；
-	char *psend = NULL;
-	int size = 0;
 	//本线程不会对list同时进行添加或者删除操作，不需要锁
-	Lru::getData(key,&psend,&size);
-	sendlist.push_back({psend,size});
+	//std::string sendbufs = Lru::getHtml(skey);
+	std::vector<std::string>  v = Lru::getHtml(skey);
+	for(auto &it:v){
+		sendlist.push_back(it);
+	}
+	
 	//std::cout<<psend<<" data"<<std::endl;
-	std::cout<<size<<" ptr size"<<std::endl;
+	//std::cout<<size<<" ptr size"<<std::endl;
     return 0;
 }
 bool Parser::sendResponse(){
 	bool bcontinue = false;
 	do{
 		if(sendlist.empty()) return true;
-		char *psend = sendlist.front().first;
-		wbufsize = sendlist.front().second;
+		std::string sendbufs = sendlist.front();
+		wbufsize = sendbufs.size();
 		std::cout<<fd <<" fd " <<wbufsize<<" bufsize " << writeindex<<" windex" <<std::endl;
-	    int writedata = write(fd, psend + writeindex,wbufsize - writeindex);
+	    int writedata = write(fd, sendbufs.c_str() + writeindex,wbufsize - writeindex);
 		if(writedata < 0) return false;
 	    writeindex += writedata;
 		std::cout<<fd <<" wite fd"<<writedata<<" write data" <<std::endl;

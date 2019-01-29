@@ -8,7 +8,7 @@ class Parser
 	    int fd;
 		std::string method;
 		std::string version;
-		int key;
+		std::string skey;
 		std::string contenttype;
 		int contentlen;
 		int curindex;
@@ -19,7 +19,7 @@ class Parser
 		char *writebuf;
 		int wbufsize;
 		int writeindex;
-		std::list<std::pair<char *,int>>sendlist;
+		std::list<std::string>sendlist;
 	public:
 		Parser(int ifd);
 		~Parser();

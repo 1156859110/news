@@ -10,6 +10,10 @@ MysqlDb::MysqlDb():mysql(NULL),row(NULL),result(NULL),key(0){
   mysql = mysql_init(NULL);
   if(mysql == NULL) std::cout << "Error: " << mysql_error(mysql);   
 }
+MysqlDb::MysqlDb(int curid):mysql(NULL),row(NULL),result(NULL),key(curid){
+  mysql = mysql_init(NULL);
+  if(mysql == NULL) std::cout << "Error: " << mysql_error(mysql);   
+}
 MysqlDb::~MysqlDb(){                                                           
   if(mysql) mysql_close(mysql);
 }
@@ -40,29 +44,30 @@ std::string MysqlDb::queryArticle(){
 		std::string str;
 		str += row[0];
 		//strcpy(particle,row[0]);
-		std::cout << row[0]<<" "<< row[0].size()<<std::endl;
+		std::cout << row[0]<<" "<<std::endl;
 		mysql_free_result(result);
 		return str;
 	}
 }
-std::unordered_map<int, Sdbtable> MysqlDb::queryTitle()
+std::unordered_map<std::string, Sdbtable> MysqlDb::queryTitle()
 {
+	std::unordered_map<std::string, Sdbtable>dbmap;
 	std::string sql("SELECT id,title,bimg,pubdate FROM newstable WHERE id > ");
 	sql += std::to_string (key);
 	
 	if(mysql_query(mysql,sql.c_str())){
 		std::cout << "query fail: " << mysql_error(mysql);   
-		return NULL;                                          
+		return dbmap;                                          
 	}
 	else{
 		Sdbtable sdb;
-		std::unordered_map<int, Sdbtable>dbmap;
+		
 		result = mysql_store_result(mysql);
 		//int colnum = mysql_num_fields(result);
 		while ((row = mysql_fetch_row (result))){
 			std::cout<<row[0]<<" "<<row[1]<<" "<<row[2]<<" "<<row[3]<<" "<<std::endl;
 			memset(&sdb,0,sizeof(sdb));
-			sdb.id = row[0] ;
+			sdb.id = atoi(row[0]);
 			strncpy(sdb.title,row[1],49);
 			sdb.title[49] = '\0';
 			sdb.bimg = row[2];
@@ -70,7 +75,7 @@ std::unordered_map<int, Sdbtable> MysqlDb::queryTitle()
 			sdb.pubdate[9] = '\0';
 			sdb.particle = NULL;
 			sdb.pimg = NULL;
-			dbmap[sdb.id] = sdb;
+			dbmap[std::to_string(sdb.id)] = sdb;
 		}
 		mysql_free_result(result);
 		return dbmap;

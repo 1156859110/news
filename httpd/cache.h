@@ -1,31 +1,33 @@
 #ifndef _CACHE_H_
 #define _CACHE_H_
+//先暂时放到这里，后续得改
+#include "mysqlDb.h"
 
-class ListNode {
-public:
-  int key;     
-  char *pdata; 
-  int psize;  
-  ListNode *pre, *next; 
-  ListNode(int k,char *d,int size):key(k),data(d),psize(size){};
-  //~ListNode();
-}; 
-
+enum EKEYTYPE{
+	EDEFAULT = 0,
+	EIMG,
+	EARTICLE,
+	EPAGE,
+};
 class Lru{
 private:
-	static std::unordered_map<int, ListNode*>lrumap;
-	static ListNode *head;
-	static ListNode *tail; 
-	static int cachesize;
-	static std::mutex lrumtx;
-	static int cursize;
-	static std::vector<std::pair<char*,int >>vtitle;
-public:
+	static std::unordered_map<std::string, Sdbtable>newsmap;
 	
-   static void listRemove(ListNode *node);
-   static void pushFront(ListNode *node);
-   static void getCalendar(char *data) ;
-   static void getData(int key,char **ppdata,int *psize);
+	static int cachenum;
+	static std::mutex lrumtx;
+	static int curid;
+	
+public:
+	static std::string getSection1();
+	static std::string getSection2Page(int key);
+	static std::string getSection2Article(std::string &skey);
+	static std::string getSection3();
+	static std::string getSection4();
+	static std::string getHeader(int len) ;
+	static std::string getErr() ;
+	static std::vector<std::string>getHtml(std::string &skey);
+	static std::string getImg(std::string &skey);
+	static int decodeSkey(std::string &skey,EKEYTYPE &etype);
 };
 #endif
 
