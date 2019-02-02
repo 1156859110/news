@@ -54,7 +54,7 @@ void serverInit()
 {
 	Log::setLevel(ERROR);
 	Log::threadCreate();
-	ThreadPool pool(1);
+	ThreadPool pool;
 	Dispatch dispatch(&pool);
 	dispatch.runDispatch();
 }

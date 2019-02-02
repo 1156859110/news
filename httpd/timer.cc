@@ -46,7 +46,12 @@ int Timer::getFd() const{
 }
 
 Timer* TimerHeap::getHeap(){
-	return (timerheap.empty() == NULL)? NULL : timerheap.top();
+	if(!timerheap.empty()){
+		std::cout<<"timer heap "<<timerheap.top()<<std::endl;
+		return timerheap.top();
+	}
+	std::cout<<"timer heap NULL"<<std::endl;
+	return NULL;
 }
 void TimerHeap::pushHeap(Timer *ptimer){
 	timerheap.push(ptimer);

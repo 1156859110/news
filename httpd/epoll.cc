@@ -22,9 +22,8 @@ int Epoll::addInEvents(int fd){
 	struct epoll_event ev;
 	ev.data.fd = fd;
 	ev.events = EPOLLIN;
-	std::cout<<fd<<" add epoll"<<std::endl;
 	evts.push_back(ev);
-	std::cout<<evts.size()<<" sss events size"<<std::endl;
+	std::cout<<evts.size()<<" epoll events "<<std::endl;
 	if((rc = epoll_ctl(epfd,EPOLL_CTL_ADD,fd,&ev)) < 0){
 		 LOG_ERROR<<"add in epoll error";
 		 std::cout<<"add in epoll error"<<std::endl;

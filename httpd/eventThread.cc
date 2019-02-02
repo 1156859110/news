@@ -15,7 +15,7 @@ EventThread::EventThread():bdestroy(false),bnewconn(false){
 	wpipe = fd[1];
  	setNonBlocking(rpipe);
 	setNonBlocking(wpipe);
-	pepoll = new Epoll(rpipe);       
+	pepoll = new Epoll(rpipe);    
 }
 EventThread::~EventThread(){
 	delete pepoll;
@@ -57,7 +57,7 @@ void EventThread::addNewCon(){
 	Parser *pparser = NULL;
 	Timer *ptimer = NULL;
 	while(read(rpipe,cbuf,8)>0);
-	std::cout<<"add new connection "<<cbuf[0]<<std::endl;
+	
 	std::lock_guard<std::mutex> locker(conmtx);
 	bnewconn = false;	
 	while(!newconlist.empty()){
@@ -65,6 +65,7 @@ void EventThread::addNewCon(){
 		if(pepoll->addInEvents(fd)!=0){
 			return ;
 		}
+		std::cout<<"add new connection "<<fd<<std::endl;
 		pparser = new Parser(fd);
 		ptimer = new Timer(fd);
 		/*
@@ -73,26 +74,31 @@ void EventThread::addNewCon(){
 		//fd2pmap[fd] = {pparser,ptimer};这样为啥不行
 		fd2pmap[fd] = std::make_pair(ptimer,pparser);
 		newconlist.pop_front();
+		timerheap.pushHeap(ptimer);
 	}	
+	std::cout<<"add new connection end "<<std::endl;
 }
 void EventThread::handleEvents(std::vector<struct epoll_event>& evts){
-	Timer *ptimer = NULL;
-	Parser *pparser = NULL;
+	
 	int size = evts.size();
 	bool bdelflag = false;
 	if(size == 0) return;
 	for(int i = 0;i < size;i++){
+		Timer *ptimer = NULL;
+		Parser *pparser = NULL;
+		std::cout<<i<<" cur cycle "<<evts[i].data.fd<<std::endl;
 		if(evts[i].data.fd == rpipe){
 			addNewCon();
 		}else{
-			std::cout<<"fd "<<evts[i].data.fd<<std::endl;
+			std::cout<<"active fd "<<evts[i].data.fd<<std::endl;
 			std::pair<Timer*, Parser* >pp = fd2pmap[evts[i].data.fd];
 			pparser = pp.second;
 			ptimer = pp.first;
 			if(evts[i].events & EPOLLIN){
 				std::cout<<" read in"<<std::endl;
 				if(pparser->readRequest() <=0) {
-					//说明连接已经关闭，这里置为过期，统一删除。
+					//说明连接已经关闭，这里置为过期，统一删除。todo
+#if 0
 					ptimer->setTimeout();
 					if(!bdelflag){
 						bdelflag = true;
@@ -101,10 +107,14 @@ void EventThread::handleEvents(std::vector<struct epoll_event>& evts){
 						timerheap.pushHeap(ptemp);
 					}
 					continue;
+#endif
 				}
 				pparser->getResponse();
 				if(!pparser->sendResponse()){
 					pepoll->addOutEvents(evts[i].data.fd);
+				}
+				if(ptimer != NULL){
+					ptimer->updateTimer();
 				}
 			}
 			if(evts[i].events & EPOLLOUT){
@@ -113,10 +123,9 @@ void EventThread::handleEvents(std::vector<struct epoll_event>& evts){
 					pepoll->delOutEvents(evts[i].data.fd);
 				}
 			}
-			ptimer->updateTimer();
 		}
-		
 	}
+	std::cout<<" heap start"<<std::endl;
 	delExpEvents();
 	std::cout<<" heap over"<<std::endl;
 }

@@ -129,7 +129,7 @@ std::string Lru::getSection2Page(int key){
 	std::string s2;
 	s2 += " <div class=\"title_header\">最新动态</div><div class=\"seperate\"></div><ul class=\"list_url\">";
 	if(curid == 0){
-		MysqlDb *pdb = new MysqlDb();
+		MysqlDb *pdb = new MysqlDb(1200);
 		if(!pdb->init()){
 			//send busy;
 		}
