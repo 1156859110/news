@@ -20,14 +20,13 @@ private:
 public:
 	static std::string getSection1();
 	static std::string getSection2Page(int key);
-	static std::string getSection2Article(std::string &skey);
+	static std::string getSection2Article(int key);
 	static std::string getSection3();
 	static std::string getSection4();
 	static std::string getHeader(int len) ;
 	static std::string getErr() ;
 	static std::vector<std::string>getHtml(std::string &skey);
-	static std::string getImg(std::string &skey);
-	static std::string getFile(std::string &skey);
+	static std::string getImages(std::string &skey);
 	static int decodeSkey(std::string &skey,EKEYTYPE &etype);
 };
 #endif

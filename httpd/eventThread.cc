@@ -102,8 +102,11 @@ void EventThread::handleEvents(std::vector<struct epoll_event>& evts){
 					if(!bdelflag){
 						bdelflag = true;
 						Timer *ptemp = timerheap.getHeap();
-						timerheap.popHeap();
-						timerheap.pushHeap(ptemp);
+						if(ptemp != NULL){
+							timerheap.popHeap();
+							timerheap.pushHeap(ptemp);
+						}
+						
 					}
 					continue;
 				}
@@ -123,9 +126,7 @@ void EventThread::handleEvents(std::vector<struct epoll_event>& evts){
 			}
 		}
 	}
-	std::cout<<" heap start"<<std::endl;
 	delExpEvents();
-	std::cout<<" heap over"<<std::endl;
 }
 
 int EventThread::setNonBlocking(int sockfd) {
@@ -163,6 +164,7 @@ void EventThread::delExpEvents(){
 		delete pparser;
 		fd2pmap.erase(ptimer->getFd());
 		close(ptimer->getFd());
+		std::cout<<"close fd "<<ptimer->getFd()<<std::endl;
 		delete ptimer;
 		ptimer = timerheap.getHeap();
 		timerheap.popHeap();

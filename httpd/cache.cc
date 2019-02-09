@@ -7,102 +7,71 @@ int Lru::curid = 0;
 int visitors = 12323;
 std::unordered_map<std::string, OrmTable> Lru::newsmap;
 std::mutex Lru::lrumtx;
-
 const int PAGESIZE = 10;
 
 //std::lock_guard<std::mutex> locker(lrumtx);
 //mapA.insert(mapB.begin(), mapB.end()) b里面的元素不会更新a
 int Lru::decodeSkey(std::string &skey,EKEYTYPE &etype){
 	int size = skey.size();
-	if(size ==0) {
+	int key = 0;
+	if(size == 0){
+		//返回首页
 		etype = EPAGE;
-		return 0;
-	}
-	else if(memcmp(skey.c_str(),"img",3) == 0){
-		etype = EIMG;
-	}else if(memcmp(skey.c_str(),"pag",3) == 0){
+		key = 1;
+	}else if(memcmp(skey.c_str(),"page",4) == 0){
 		etype = EPAGE;
-	}else if(memcmp(skey.c_str(),"art",3) == 0){
+		key = atoi(skey.substr(4).c_str());
+	}else if(memcmp(skey.c_str(),"article",7) == 0){
 		etype = EARTICLE;
+		key = atoi(skey.substr(7).c_str());
 	}else{
-		etype =  EDEFAULT;
-		std::cout<<"type default"<<std::endl;
+		etype = EIMG;
 	}
-	std::cout <<" keys: type "<< etype<< '\n';
-	return 0;
+	std::cout <<key <<" keys: type "<< etype<< '\n';
+	return key;
 }
 //todo 后续改为指针
-std::string Lru::getFile(std::string &skey){
+std::string Lru::getImages(std::string &skey){
 	OrmTable otb = newsmap[skey];
 	if(newsmap[skey].pimg == NULL){
-		std::string filename = "/root/news/index/"+skey;
+		std::string filename = "/root/news/image/"+skey;
 		std::ifstream sfp(filename);
 		std::stringstream temp;
 		temp << sfp.rdbuf();
 		std::string header;
 		header += "HTTP/1.1 200 OK\r\nServer: husk's news server\r\n";
 		header += "Content-length:   "+ std::to_string(temp.str().size())  + " \r\n";
-		header += "Content-Type: text/css\r\nConnection: Keep-Alive\r\n\r\n";
+		if(skey.find(".jpg") != std::string::npos){
+			header += "Content-Type: image/jpg\r\nConnection: Keep-Alive\r\n\r\n";
+		}else if(skey.find(".css") != std::string::npos){
+			header += "Content-Type: text/css\r\nConnection: Keep-Alive\r\n\r\n";
+		}else{
+			header += "Content-Type: text/html\r\nConnection: Keep-Alive\r\n\r\n";
+		}
 		header += temp.str();
 		return header;
 	}else{
 		return " ";
 	}
 } 
-
-std::string Lru::getImg(std::string &skey){
-	OrmTable otb = newsmap[skey];
-	if(!otb.bimg) return " ";
-	if(newsmap[skey].pimg == NULL){
-#if 0 
-		FILE *fp;  
-		int flen;
-		if((fp = fopen(skey, "r")) == 0){
-		std::cout<<"open failed!"<<std::endl;
-		}
-		fseek(fp, 0L, SEEK_END);
-		flen = ftell(fp);
-		rewind(fp);
-		std::string header;
-		header += "HTTP/1.1 200 OK\r\nServer: husk's news server\r\n";
-		header += "Content-length:   "+ std::to_string(flen)  + " \r\n";
-		header += "Content-Type: image/jpg\r\nConnection: Keep-Alive\r\n\r\n";
-		int size = header.size();
-		char *pimg = new char[flen + size]();
-		strncpy(pimg,header.c_str(),size);
-		std::cout<<flen<<" flen!"<<std::endl;
-		fread(pimg + size, 1, flen, fp);
-		fclose(fp);  
-#endif
-		std::ifstream sfp(skey);
-		std::stringstream temp;
-		temp << sfp.rdbuf();
-		return temp.str();
-	}else{
-		return " ";
-	}
-} 
-
 std::vector<std::string> Lru::getHtml(std::string &skey){
 	
 	EKEYTYPE etype = EDEFAULT;
-	decodeSkey(skey,etype);
+	std::string s2;
+	int key = decodeSkey(skey,etype);
 	std::vector<std::string>v;
 	if(etype == EPAGE){
-		
-	}
-	else if(etype == EIMG){
-		 Lru::getImg(skey);
+		s2 = getSection2Page(key);
 	}
 	else if(etype == EARTICLE){
-		//Lru::getArticle(skey,key);
+		s2 = getSection2Article(key);
 	}
 	else{
-		v.push_back(Lru::getFile(skey));
+		//image/css等类型
+		v.push_back(getImages(skey));
 		return v;
 	}
 	std::string s1 = getSection1();
-	std::string s2 = getSection2Page(1);
 	std::string s3 = getSection3();
 	std::string s4 = getSection4();
 	std::string s0 = getHeader(s1.size()+s2.size()+s3.size()+s4.size());
@@ -163,11 +132,12 @@ std::string Lru::getSection2Page(int key){
 	int start = curid - PAGESIZE * key -1;
 	if(start < 0) start = 0;
 	int i = 0;
+	//这个顺序反了，需要改一下
 	while(start < curid && i < PAGESIZE){
 		OrmTable otb = newsmap[std::to_string(start)];
 		std::cout<<" sid start"<<start;
 		std::cout<<otb.sid<<" sid "<<otb.stitle<<" stitle "<<otb.spubdate<<" spubdate"<<std::endl;
-		s2+= "<li><a href=\"art";
+		s2+= "<li><a href=\"article";
 		s2+= otb.sid;
 		s2+= "\">";
 		s2+= otb.stitle;
@@ -186,19 +156,19 @@ std::string Lru::getSection2Page(int key){
 	s2+= "<a href=\" " + std::to_string(key+1)+ "\">>></a></p></div>";
 	return s2;
 } 
-std::string Lru::getSection2Article(std::string &skey){
-	OrmTable otb = newsmap[skey];
+std::string Lru::getSection2Article(int key){
+	OrmTable otb = newsmap[std::to_string(key)];
 	std::string s2,stemp;
 	s2 += " <div class=\"title_header\">";
 	s2 +=  otb.stitle;
 	s2 +=  "</div>";
 	if(otb.bimg){
-		s2 += "<div class=\"article_image fr\"> <img src=\"images/";
+		s2 += "<div class=\"article_image fr\"> <img src=\"";
 		s2 += otb.sid;
 		s2 += ".jpg\" alt=\"image\" width=\"300\" height=\"200\" /></div>";
 	}
 	s2 += "<p>";
-	if(newsmap[skey].particle == NULL){
+	if(otb.particle == NULL){
 		MysqlDb *pdb = new MysqlDb(otb.sid);
 		if(!pdb->init()){
 			//send busy;
@@ -206,7 +176,7 @@ std::string Lru::getSection2Article(std::string &skey){
 		stemp = pdb->queryArticle();
 		delete pdb;
 	}else{
-		stemp = newsmap[skey].particle;
+		stemp = otb.particle;
 	}
 	s2 += stemp;
 	s2 += "</p>";
