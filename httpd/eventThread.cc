@@ -96,9 +96,8 @@ void EventThread::handleEvents(std::vector<struct epoll_event>& evts){
 			ptimer = pp.first;
 			if(evts[i].events & EPOLLIN){
 				std::cout<<" read in"<<std::endl;
-				if(pparser->readRequest() <=0) {
-					//说明连接已经关闭，这里置为过期，统一删除。todo
-#if 0
+				if(!pparser->readRequest()){
+					//说明连接已经关闭，这里置为过期，如果有一个过期事件，后续不在调整堆。
 					ptimer->setTimeout();
 					if(!bdelflag){
 						bdelflag = true;
@@ -107,7 +106,6 @@ void EventThread::handleEvents(std::vector<struct epoll_event>& evts){
 						timerheap.pushHeap(ptemp);
 					}
 					continue;
-#endif
 				}
 				pparser->getResponse();
 				if(!pparser->sendResponse()){
@@ -160,7 +158,7 @@ void EventThread::delExpEvents(){
 	if(ptimer->getCurexp() > time){
 		timerheap.pushHeap(ptimer);
 	}
-	while(ptimer->getCurexp() < time){
+	while(ptimer != NULL && ptimer->getCurexp() < time){
 		pparser = fd2pmap[ptimer->getFd()].second;
 		delete pparser;
 		fd2pmap.erase(ptimer->getFd());

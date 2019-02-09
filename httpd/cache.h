@@ -11,7 +11,7 @@ enum EKEYTYPE{
 };
 class Lru{
 private:
-	static std::unordered_map<std::string, Sdbtable>newsmap;
+	static std::unordered_map<std::string, OrmTable>newsmap;
 	
 	static int cachenum;
 	static std::mutex lrumtx;
@@ -27,6 +27,7 @@ public:
 	static std::string getErr() ;
 	static std::vector<std::string>getHtml(std::string &skey);
 	static std::string getImg(std::string &skey);
+	static std::string getFile(std::string &skey);
 	static int decodeSkey(std::string &skey,EKEYTYPE &etype);
 };
 #endif

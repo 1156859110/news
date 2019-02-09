@@ -148,7 +148,7 @@ int Parser::parseStart(){
 	return 0;
 }
 
-int Parser::readRequest(){
+bool Parser::readRequest(){
 	if(readindex == BUFSIZE){
 		memmove(readbuf,readbuf+preindex,BUFSIZE - preindex);
 		memset(readbuf + BUFSIZE - preindex,0,preindex);
@@ -158,12 +158,15 @@ int Parser::readRequest(){
 	}
    int readdata = read(fd, readbuf + readindex,  BUFSIZE - readindex);
    //返回为0，说明连接关闭。
-   if(readdata <= 0 ) return readdata;
-   
+   if(readdata <= 0 ) {
+	   std::cout<<readdata<<" read data error "<<std::endl;
+	   return false;
+   }
    readindex += readdata;
    readbuf[readindex] = '\0';
    std::cout<<readdata<<" data read to buff "<<readbuf<<std::endl;
    parseStart();
+   return true;
 }
 int Parser::getResponse(){
 	//本线程不会对list同时进行添加或者删除操作，不需要锁

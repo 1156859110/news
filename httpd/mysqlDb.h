@@ -3,30 +3,33 @@
  
 #include <mysql/mysql.h>
 
-typedef struct {
-	int id;
+class OrmTable{
+public:
+	std::string sid;
 	int artlen;
 	int imglen;
 	int cnt;
-	char title[50];
+	std::string stitle;
 	bool bimg;
-	char pubdate[10];
+	std::string spubdate;
 	char *particle;
 	char *pimg;
-}Sdbtable;
+	OrmTable();
+	~OrmTable();
+};
 
 
 class MysqlDb
 { 
 public:
 	MysqlDb();
-	MysqlDb(int curid);
+	MysqlDb(std::string sid);
 	~MysqlDb();
 	bool init();         
 	std::string queryArticle();
-	std::unordered_map<std::string, Sdbtable>  queryTitle();
+	int queryTitle(std::unordered_map<std::string, OrmTable> &dbmap);
 private:
-	unsigned int key;      
+	std::string skey;      
 	MYSQL* mysql;
 	MYSQL_ROW row;
 	MYSQL_RES* result;                                           
