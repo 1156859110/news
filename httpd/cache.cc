@@ -4,10 +4,11 @@
 
 int Lru::cachenum = 100;//存放最近100条数据
 int Lru::curid = 0;
-int visitors = 12323;
+int visitors = 0;
 std::unordered_map<std::string, OrmTable> Lru::newsmap;
 std::mutex Lru::lrumtx;
-const int PAGESIZE = 10;
+const int PAGESIZE = 20;
+const int TOPN = 5;
 
 //std::lock_guard<std::mutex> locker(lrumtx);
 //mapA.insert(mapB.begin(), mapB.end()) b里面的元素不会更新a
@@ -129,11 +130,10 @@ std::string Lru::getSection2Page(int key){
 		std::cout<<" cur id is"<< curid<< '\n';
 		delete pdb;
 	}
-	int start = curid - PAGESIZE * key -1;
+	int start = curid - PAGESIZE *(key -1);
 	if(start < 0) start = 0;
 	int i = 0;
-	//这个顺序反了，需要改一下
-	while(start < curid && i < PAGESIZE){
+	while(start >0 && i < PAGESIZE){
 		OrmTable otb = newsmap[std::to_string(start)];
 		std::cout<<" sid start"<<start;
 		std::cout<<otb.sid<<" sid "<<otb.stitle<<" stitle "<<otb.spubdate<<" spubdate"<<std::endl;
@@ -144,16 +144,15 @@ std::string Lru::getSection2Page(int key){
 		s2+= "</a> <span>";
 		s2+= otb.spubdate;
 		s2+= "</span></li>";
-		++start;
+		--start;
 		++i;
 	}
-	s2+=" <div class=\"cleaner\"></div></ul><div class=\"seperate\"></div><div class= \"fr\" > <p>页次：";
-	s2+=std::to_string(key)+"/"+std::to_string(curid/10);
-	if(key >= 1){
-		s2+= "<a href=\" "+std::to_string(key-1)+ "\"><<</a>";
+	s2+=" <div class=\"cleaner\"></div></ul><div class=\"seperate\"></div><div class= \"fr\" > <p>";
+	if(key > 1){
+		s2+= "<a href=\"page"+std::to_string(key-1)+ "\">上一页</a>";
 	}
-	s2+= std::to_string(key);
-	s2+= "<a href=\" " + std::to_string(key+1)+ "\">>></a></p></div>";
+	s2+= " 第"+std::to_string(key)+"页 ";
+	s2+= "<a href=\"page" + std::to_string(key+1)+ "\">下一页</a></p></div>";
 	return s2;
 } 
 std::string Lru::getSection2Article(int key){
@@ -168,6 +167,7 @@ std::string Lru::getSection2Article(int key){
 		s2 += ".jpg\" alt=\"image\" width=\"300\" height=\"200\" /></div>";
 	}
 	s2 += "<p>";
+	++newsmap[std::to_string(key)].cnt;
 	if(otb.particle == NULL){
 		MysqlDb *pdb = new MysqlDb(otb.sid);
 		if(!pdb->init()){
@@ -182,6 +182,7 @@ std::string Lru::getSection2Article(int key){
 	s2 += "</p>";
 	return s2;
 } 
+//这个地方后续做成缓冲比较快。
 std::string Lru::getSection3() {
 	 std::string s3;
 	 
@@ -189,13 +190,38 @@ std::string Lru::getSection3() {
 	 s3 += " </div><div class=\"cleaner\"></div></div><div class=\"section_w250 fr\"> ";
 	 s3 += "  <div class=\"section_w250_title hot_news_title\">热度排行</div>";
 	 s3 += "<div class=\"w250_content\"><div class=\"latest_news\"><ul class=\"list_url\">";
-	 s3 += "<li><a href=\" ";
-	 int title = 10;
-	 //todo待计算排名前5的数据
-	 s3 += std::to_string(title);
-	 s3 += "\">";
-	 s3 += std::to_string(title);
-	 s3 += " </a></li></ul></div></div><div class=\"margin_bottom_20\"></div>";
+	 
+	 struct cmp{
+	     bool operator() (const OrmTable a, const OrmTable b ){
+	 	    return a.cnt > b.cnt; 
+	 	}
+	 };
+	 std::priority_queue<OrmTable,std::vector<OrmTable>, cmp>hotnews;
+	 for(int i = 0; i< cachenum ; ++i){
+		 if(curid - i <= 0) break;
+		 OrmTable otb = newsmap[std::to_string(curid - i)];
+		 if(i < TOPN){
+			 hotnews.push(otb);
+			 continue;
+		 }
+		 if(hotnews.top().cnt < otb.cnt){
+			 hotnews.pop();
+			 hotnews.push(otb);
+		 }
+	 }
+	 std::vector<std::pair<std::string,std::string>>vss(TOPN);
+	 for(int i = 0 ; i < TOPN; ++i){
+		 vss[i] = {hotnews.top().sid,hotnews.top().stitle};
+		 hotnews.pop();
+	 }
+	 for(int i = TOPN - 1; i >=0 ; --i){
+		 s3 += "<li><a href=\" article";
+		 s3 += vss[i].first;
+		 s3 += "\">" ;
+		s3 += vss[i].second;
+		s3 +=  "</a></li>";
+	 }
+	 s3 += " </ul></div></div><div class=\"margin_bottom_20\"></div>";
 	 s3 += " <div class=\"section_w250_title visitor_title\">访问统计</div> <div class=\"w250_content\">";
 	 return s3;
 }

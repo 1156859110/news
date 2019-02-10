@@ -8,9 +8,9 @@ Epoll::Epoll(int pfd):epfd(epoll_create(1)),rpipe(pfd){
 Epoll::~Epoll(){
 	delInEvents(rpipe);
 }
+//todo evts的size一直增加会不会有问题？，需要处理
 std::vector<struct epoll_event> Epoll::epollWait(int waittime){
 	std::cout<<evts.size()<<" events size"<<std::endl; 
-	//&*events.begin() 
 	int num = epoll_wait(epfd,&evts[0],(int)evts.size(),waittime);
 	std::vector<struct epoll_event>v(evts.begin(),evts.begin() + num);
 	std::cout<<num<<" active events"<<std::endl; 

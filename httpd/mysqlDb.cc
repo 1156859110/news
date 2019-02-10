@@ -88,7 +88,7 @@ int MysqlDb::queryTitle(std::unordered_map<std::string, OrmTable> &dbmap)
 			std::cout<<row[0]<<" "<<row[1]<<" "<<row[2]<<" "<<row[3]<<" "<<std::endl;
 			otb.sid += row[0];
 			otb.stitle += row[1];
-			otb.bimg = row[2];
+			otb.bimg = atoi(row[2]);
 			otb.spubdate += row[3];
 			otb.particle = NULL;
 			otb.pimg = NULL;

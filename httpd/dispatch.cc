@@ -7,7 +7,7 @@
 #include "eventThread.h"
 #include "threadPool.h"
 #include "dispatch.h"
-
+extern int visitors;
 const int LISTENQ = 1024;
 
 int Dispatch::setNonBlocking(int sockfd){
@@ -79,6 +79,7 @@ void Dispatch::runDispatch(){
 			 setNonBlocking(connfd);
 			 pevthrd =  pthrdpool->getEventThread();
 			 pevthrd->addConList(connfd);
+			 ++visitors;
 		 }	
 		
 		pthrdpool->notify();

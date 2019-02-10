@@ -33,7 +33,6 @@ void* EventThread::runEvent(void *arg){
 	while(!pevtthread->bdestroy){
 		std::vector<struct epoll_event>v;
 		v = pevtthread->pepoll->epollWait(120000);
-		std::cout<<"v size  "<<v[0].data.fd<<std::endl;
 		pevtthread->handleEvents(v);
 	}
 	pthread_exit(NULL);
@@ -143,7 +142,6 @@ int EventThread::setNonBlocking(int sockfd) {
     }
 	return rc;
 }
-//有个异常啊
 void EventThread::delExpEvents(){
 	int time = Timer::getTime();
 		
@@ -151,15 +149,15 @@ void EventThread::delExpEvents(){
 	Parser *pparser = NULL;
 	if(ptimer == NULL) return;
 	std::cout<<"update heap "<<ptimer->getCurexp()<<std::endl;
-	
 	//最小的的都没有超时，不更新堆，直接返回。
 	if(ptimer->getPreexp() > time) return;
+	
 	timerheap.popHeap();
 	ptimer->syncTimer();
-	if(ptimer->getCurexp() > time){
-		timerheap.pushHeap(ptimer);
-	}
+	timerheap.pushHeap(ptimer);
+	ptimer = timerheap.getHeap();
 	while(ptimer != NULL && ptimer->getCurexp() < time){
+		timerheap.popHeap();
 		pparser = fd2pmap[ptimer->getFd()].second;
 		delete pparser;
 		fd2pmap.erase(ptimer->getFd());
@@ -167,7 +165,6 @@ void EventThread::delExpEvents(){
 		std::cout<<"close fd "<<ptimer->getFd()<<std::endl;
 		delete ptimer;
 		ptimer = timerheap.getHeap();
-		timerheap.popHeap();
 	}
 }
 	
