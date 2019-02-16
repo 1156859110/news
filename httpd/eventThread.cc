@@ -10,9 +10,11 @@ EventThread::EventThread():bdestroy(false),bnewconn(false){
     int fd[2];
     if(pipe(fd) < 0){
     	LOG_ERROR<<"create pipe error\n";
+		std::cout<<"create pipe error\n";
     }
 	rpipe = fd[0];
 	wpipe = fd[1];
+	std::cout<<fd[0]<<"pipe is "<<fd[1]<<"\n";
  	setNonBlocking(rpipe);
 	setNonBlocking(wpipe);
 	pepoll = new Epoll(rpipe);    
@@ -105,11 +107,9 @@ void EventThread::handleEvents(std::vector<struct epoll_event>& evts){
 							timerheap.popHeap();
 							timerheap.pushHeap(ptemp);
 						}
-						
 					}
 					continue;
 				}
-				pparser->getResponse();
 				if(!pparser->sendResponse()){
 					pepoll->addOutEvents(evts[i].data.fd);
 				}

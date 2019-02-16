@@ -41,6 +41,7 @@ std::string Lru::getImages(std::string &skey){
 		temp << sfp.rdbuf();
 		std::string header;
 		header += "HTTP/1.1 200 OK\r\nServer: husk's news server\r\n";
+		header += "Cache-control: no-cache\r\n";
 		header += "Content-length:   "+ std::to_string(temp.str().size())  + " \r\n";
 		if(skey.find(".jpg") != std::string::npos){
 			header += "Content-Type: image/jpg\r\nConnection: Keep-Alive\r\n\r\n";
@@ -59,8 +60,10 @@ std::vector<std::string> Lru::getHtml(std::string &skey){
 	
 	EKEYTYPE etype = EDEFAULT;
 	std::string s2;
-	int key = decodeSkey(skey,etype);
 	std::vector<std::string>v;
+	if(skey == "") return v;
+	int key = decodeSkey(skey,etype);
+	
 	if(etype == EPAGE){
 		s2 = getSection2Page(key);
 	}
@@ -91,6 +94,7 @@ std::string Lru::getHeader(int len)
 	header += "Server: husk's news server\r\n";
 	header += "Content-length:   "+ std::to_string(len)  + " \r\n";
 	header += "Content-Type: text/html\r\n";
+	header += "Cache-control: no-cache\r\n";
 	header += "Connection: Keep-Alive\r\n\r\n";
 	return header;                 
 }
@@ -116,6 +120,7 @@ std::string Lru::getSection2Page(int key){
 	std::string s2;
 	s2 += " <div class=\"title_header\">最新动态</div><div class=\"seperate\"></div><ul class=\"list_url\">";
 	if(curid == 0){
+		//todo
 		MysqlDb *pdb = new MysqlDb("1300");
 		if(!pdb->init()){
 			//send busy;
@@ -135,8 +140,8 @@ std::string Lru::getSection2Page(int key){
 	int i = 0;
 	while(start >0 && i < PAGESIZE){
 		OrmTable otb = newsmap[std::to_string(start)];
-		std::cout<<" sid start"<<start;
-		std::cout<<otb.sid<<" sid "<<otb.stitle<<" stitle "<<otb.spubdate<<" spubdate"<<std::endl;
+		//std::cout<<" sid start"<<start;
+		//std::cout<<otb.sid<<" sid "<<otb.stitle<<" stitle "<<otb.spubdate<<" spubdate"<<std::endl;
 		s2+= "<li><a href=\"article";
 		s2+= otb.sid;
 		s2+= "\">";

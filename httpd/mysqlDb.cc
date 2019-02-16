@@ -58,7 +58,7 @@ std::string MysqlDb::queryArticle(){
 		std::string str;
 		str += row[0];
 		//strcpy(particle,row[0]);
-		std::cout << row[0]<<" "<<std::endl;
+		//std::cout << row[0]<<" "<<std::endl;
 		mysql_free_result(result);
 		return str;
 	}
@@ -85,7 +85,7 @@ int MysqlDb::queryTitle(std::unordered_map<std::string, OrmTable> &dbmap)
 				bid = false;
 			}
 			OrmTable otb;
-			std::cout<<row[0]<<" "<<row[1]<<" "<<row[2]<<" "<<row[3]<<" "<<std::endl;
+			//std::cout<<row[0]<<" "<<row[1]<<" "<<row[2]<<" "<<row[3]<<" "<<std::endl;
 			otb.sid += row[0];
 			otb.stitle += row[1];
 			otb.bimg = atoi(row[2]);

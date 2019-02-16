@@ -62,11 +62,14 @@ int Parser::parseReqline(char *pbuf)
 		method = "UNKNOWN";
     }
 	std::cout<<"method is"<<method<<std::endl;
+	//需要清除上次的skey
+	skey = "";
 	pbuf += 2;
 	while(pbuf[0] != ' '){
 		skey += pbuf[0];
 		++pbuf;
 	}
+	if(skey == "") skey = "page1";
 	std::cout<<"skey is"<<skey<<std::endl;
 	++pbuf;//指向httpversion
     if (strncasecmp(pbuf, "HTTP/1.1" ,8) == 0 ){
@@ -164,7 +167,7 @@ bool Parser::readRequest(){
    }
    readindex += readdata;
    readbuf[readindex] = '\0';
-   std::cout<<readdata<<" data read to buff "<<readbuf<<std::endl;
+   std::cout<<readdata<<" data read to buff \n"<<readbuf + readindex - readdata<<std::endl;
    parseStart();
    return true;
 }
@@ -172,6 +175,7 @@ int Parser::getResponse(){
 	//本线程不会对list同时进行添加或者删除操作，不需要锁
 	//std::string sendbufs = Lru::getHtml(skey);
 	std::vector<std::string>  v = Lru::getHtml(skey);
+	skey = "";
 	for(auto &it:v){
 		sendlist.push_back(it);
 	}
@@ -183,16 +187,16 @@ int Parser::getResponse(){
 bool Parser::sendResponse(){
 	bool bcontinue = false;
 	do{
-		std::cout<<sendlist.size() <<"list size"<<std::endl;
+		std::cout <<"list size is "<<sendlist.size()<<std::endl;
 		if(sendlist.empty()) return true;
 		std::string sendbufs = sendlist.front();
 		wbufsize = sendbufs.size();
-		std::cout<<fd <<" fd " <<wbufsize<<" bufsize " << writeindex<<" windex" <<std::endl;
+		std::cout<<" fd " <<fd<<" buf size " <<wbufsize<<" write index"<<writeindex<<std::endl;
 	    int writedata = write(fd, sendbufs.c_str() + writeindex,wbufsize - writeindex);
 		if(writedata < 0) return false;
 	    writeindex += writedata;
 		std::cout<<fd <<" wite fd"<<writedata<<" write data" <<std::endl;
-		bcontinue  = (writeindex == wbufsize);
+		bcontinue  = (writeindex == wbufsize)?true:false;
 		if(writeindex == wbufsize){
 			writeindex = 0;
 			wbufsize = 0;
