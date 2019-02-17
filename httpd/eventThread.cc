@@ -34,7 +34,7 @@ void* EventThread::runEvent(void *arg){
 	EventThread *pevtthread = (EventThread *)arg;
 	while(!pevtthread->bdestroy){
 		std::vector<struct epoll_event>v;
-		v = pevtthread->pepoll->epollWait(120000);
+		v = pevtthread->pepoll->epollWait(5000);
 		pevtthread->handleEvents(v);
 	}
 	pthread_exit(NULL);
@@ -58,7 +58,7 @@ void EventThread::addNewCon(){
 	Parser *pparser = NULL;
 	Timer *ptimer = NULL;
 	while(read(rpipe,cbuf,8)>0);
-	
+	std::cout<<"thread running is "<<pthread_self()<<std::endl;
 	std::lock_guard<std::mutex> locker(conmtx);
 	bnewconn = false;	
 	while(!newconlist.empty()){
@@ -82,6 +82,7 @@ void EventThread::addNewCon(){
 void EventThread::handleEvents(std::vector<struct epoll_event>& evts){
 	
 	int size = evts.size();
+	std::cout<<"thread "<<pthread_self()<<" is handle events "<<std::endl;
 	bool bdelflag = false;
 	if(size == 0) return;
 	for(int i = 0;i < size;i++){
