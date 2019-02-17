@@ -7,10 +7,10 @@
 #include "eventThread.h"
 #include "threadPool.h"
 #include "dispatch.h"
-	//有点2的new方法，，，new EventThread *[threadnum]
+
 ThreadPool::ThreadPool():
 threadnum(get_nprocs()*1.5),bdestroy(false),tid(threadnum,0),
-pevtthrd(new EventThread *[threadnum]),count(0){
+pevtthrd(threadnum,NULL),count(0){
 	for(int i = 0; i < threadnum; ++i){
 		pevtthrd[i] = new EventThread();
 		pthread_create(&tid[i], NULL, pevtthrd[i]->runEvent,pevtthrd[i]);
@@ -18,7 +18,7 @@ pevtthrd(new EventThread *[threadnum]),count(0){
 }
 ThreadPool::ThreadPool(int tnum):
 threadnum(tnum),bdestroy(false),tid(threadnum,0),
-	pevtthrd(new EventThread *[threadnum]),count(0){
+	pevtthrd(threadnum,NULL),count(0){
 	for(int i = 0; i < threadnum; ++i){
 		pevtthrd[i] = new EventThread();
 		pthread_create(&tid[i], NULL, pevtthrd[i]->runEvent, pevtthrd[i]);
@@ -32,7 +32,6 @@ ThreadPool::~ThreadPool(){
 		LOG_DEBUG<<"thread destroy";
 		std::cout<<"thread destroy"<< pthread_self()<<std::endl;
 	}
-	delete[] pevtthrd;
 }
 int ThreadPool::getThreadNum(){
 	return threadnum;

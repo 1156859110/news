@@ -2,7 +2,7 @@
 #include "log.h"
 #include "timer.h"
 
-const int DEFAULT = 120000;//120s
+const int DEFAULT = 5000;//120s
 Timer::Timer(int ifd,int timeout):fd(ifd){
     preexp = getTime() + timeout;
 	curexp = preexp;

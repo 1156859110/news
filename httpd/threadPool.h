@@ -9,7 +9,7 @@ class ThreadPool
 private:
 	bool bdestroy;
 	int threadnum;
-	EventThread **pevtthrd;
+	std::vector<EventThread *>pevtthrd;
 	std::vector<pthread_t>tid;
 	unsigned int count ;
 public:

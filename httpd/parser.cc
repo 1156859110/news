@@ -25,7 +25,7 @@ enum { OK = 0, ERR ,UNFINISHED,FINISHED,REQUEST, HEADER, CONTENT};
 const int BUFSIZE = 1024;
 
 Parser::Parser(int ifd):fd(ifd),writeindex(0),wbufsize(0),readindex (0),curindex (0),preindex (0),
-state(REQUEST),readbuf(new char[BUFSIZE]),writebuf(NULL),contentlen(0),method("UNKNOWN"),
+state(REQUEST),readbuf(new char[BUFSIZE+1]),writebuf(NULL),contentlen(0),method("UNKNOWN"),
 version("UNKNOWN"),skey(""),contenttype("UNKNOWN"){
 	memset(readbuf,0,sizeof(BUFSIZE));
 };
@@ -166,6 +166,7 @@ bool Parser::readRequest(){
 	   return false;
    }
    readindex += readdata;
+   //需要多开辟一个字节
    readbuf[readindex] = '\0';
    std::cout<<readdata<<" data read to buff \n"<<readbuf + readindex - readdata<<std::endl;
    parseStart();
