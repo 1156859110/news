@@ -58,7 +58,7 @@ void EventThread::addNewCon(){
 	Parser *pparser = NULL;
 	Timer *ptimer = NULL;
 	while(read(rpipe,cbuf,8)>0);
-	std::cout<<"thread running is "<<pthread_self()<<std::endl;
+	std::cout<<"thread running is "<<syscall(__NR_gettid)<<std::endl;
 	std::lock_guard<std::mutex> locker(conmtx);
 	bnewconn = false;	
 	while(!newconlist.empty()){
@@ -66,7 +66,7 @@ void EventThread::addNewCon(){
 		if(pepoll->addInEvents(fd)!=0){
 			return ;
 		}
-		std::cout<<"add new connection "<<fd<<std::endl;
+		std::cout<<"timer heap add new connection fd "<<fd<<std::endl;
 		pparser = new Parser(fd);
 		ptimer = new Timer(fd);
 		/*
@@ -82,17 +82,17 @@ void EventThread::addNewCon(){
 void EventThread::handleEvents(std::vector<struct epoll_event>& evts){
 	
 	int size = evts.size();
-	std::cout<<"thread "<<pthread_self()<<" is handle events "<<std::endl;
+	std::cout<<"thread "<<syscall(__NR_gettid)<<" is handle events "<<std::endl;
 	bool bdelflag = false;
 	if(size == 0) return;
 	for(int i = 0;i < size;i++){
 		Timer *ptimer = NULL;
 		Parser *pparser = NULL;
-		std::cout<<i<<" cur cycle "<<evts[i].data.fd<<std::endl;
+		//std::cout<<i<<" cur cycle "<<evts[i].data.fd<<std::endl;
 		if(evts[i].data.fd == rpipe){
 			addNewCon();
 		}else{
-			std::cout<<"active fd "<<evts[i].data.fd<<std::endl;
+			std::cout<<"active fd is "<<evts[i].data.fd<<std::endl;
 			std::pair<Timer*, Parser* >pp = fd2pmap[evts[i].data.fd];
 			pparser = pp.second;
 			ptimer = pp.first;

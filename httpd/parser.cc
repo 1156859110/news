@@ -94,8 +94,9 @@ int Parser::parseHeaders(char *pbuf)
         pbuf += 15;
 		int i = 0;
 		while(pbuf[i] != '\r'){
-			if(pbuf[i] == ' ') continue;
-			contentlen = contentlen*10+ pbuf[i]-'0';
+			if(pbuf[i] >= '0'&& pbuf[i] <='9') {
+				contentlen = contentlen*10+ pbuf[i]-'0';
+			}
 			++i;
 		}
     }
@@ -128,7 +129,7 @@ int Parser::parseStart(){
 			switch (state){
 				case REQUEST:
 					parseReqline(pbuf);
-					state   = HEADER;
+					state = HEADER;
 					break;
 				case HEADER:		           
 					if(parseHeaders(pbuf) == FINISHED){
@@ -144,7 +145,7 @@ int Parser::parseStart(){
 		if(state == FINISHED){
 			getResponse();
 			std::cout<<curindex<<" "<<readindex<<"curindex  readindex "<<std::endl;
-			state     = REQUEST;
+			state = REQUEST;
 		}
 		
 	}

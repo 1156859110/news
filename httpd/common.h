@@ -31,4 +31,5 @@
 
 #include <fstream>
 #include <sstream>
+#include <sys/syscall.h>     
 #endif

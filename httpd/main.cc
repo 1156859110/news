@@ -45,15 +45,15 @@ void daemonize(void (*function)())
 	for (i = 0; i < rl.rlim_max; i++)
 		close(i);
 	/*将标准输入输出重定向到/dev/null.*/
-	//fd0 = open("/dev/null", O_RDWR);
-	//fd1 = dup(0);
-	//fd2 = dup(0);
+	fd0 = open("/log.txt", O_RDWR);
+	fd1 = dup(0);
+	fd2 = dup(0);
 	function();
 }
 void serverInit()
 {
-	Log::setLevel(ERROR);
-	Log::threadCreate();
+	//Log::setLevel(ERROR);
+	//Log::threadCreate();
 	ThreadPool pool;
 	Dispatch dispatch(&pool);
 	dispatch.runDispatch();
