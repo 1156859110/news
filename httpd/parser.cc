@@ -175,8 +175,8 @@ bool Parser::readRequest(){
 }
 int Parser::getResponse(){
 	//本线程不会对list同时进行添加或者删除操作，不需要锁
-	//std::string sendbufs = Lru::getHtml(skey);
-	std::vector<std::string>  v = Lru::getHtml(skey);
+	//std::string sendbufs = Cache::getHtml(skey);
+	std::vector<std::string>  v = Cache::getHtml(skey);
 	skey = "";
 	for(auto &it:v){
 		sendlist.push_back(it);

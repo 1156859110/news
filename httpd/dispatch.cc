@@ -7,7 +7,7 @@
 #include "eventThread.h"
 #include "threadPool.h"
 #include "dispatch.h"
-extern int visitors;
+
 const int LISTENQ = 1024;
 
 int Dispatch::setNonBlocking(int sockfd){
@@ -75,11 +75,10 @@ void Dispatch::runDispatch(){
 		  //std::cout << "new thread pool " << pthrdpool<< std::endl;
 		 while((connfd=accept(listenfd,(struct sockaddr*)&clientaddr, &clientlen)) > 0){
 			 std::cout << "new connection fd " << connfd<< std::endl;
-			 LOG_DEBUG << "new connection fd " <<connfd;
+			 LOG_DEBUG << "new connection fd " <<connfd<<"\n";
 			 setNonBlocking(connfd);
 			 pevthrd =  pthrdpool->getEventThread();
 			 pevthrd->addConList(connfd);
-			 ++visitors;
 		 }	
 		
 		pthrdpool->notify();
