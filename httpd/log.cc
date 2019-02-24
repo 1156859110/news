@@ -2,8 +2,7 @@
 #include "common.h"
 #include "log.h"
 
-int Log::level = 0;
-pthread_t Log::tid = 0;
+int Log::level = INFO;
 static const char digits[] = "9876543210123456789";
 static const char *zero = digits + 9;
 template <typename T>
@@ -97,7 +96,8 @@ Log& Log::operator<<(const std::string& str)
 long Log::getTimeVal(){
 	struct timeval time;
 	gettimeofday(&time, NULL);
-	return((long)(time.tv_sec) * 1000000 + time.tv_usec);
+	//取10的10次方，大概几个小时的精度
+	return((long)(time.tv_sec) * 1000000 + time.tv_usec)%10000000000;
 }
 void Log::getDate(char *pdate){
 	
@@ -107,14 +107,14 @@ void Log::getDate(char *pdate){
  
     ltm->tm_year += 1900;
     ltm->tm_mon += 1;
-	int iDate = ltm->tm_year*10000 + ltm->tm_mon + ltm->tm_mday;
+	int iDate = ltm->tm_year*10000 + ltm->tm_mon*100 + ltm->tm_mday;
 	char date[10];
 	intTostr(date, iDate);
 	strcpy(pdate,date);
 }
-
+//注意不线程安全的，在多线程里面调用之前先调用避免静态类构造问题
 Log& Log::getLog(){
-	static Log log;//注意不线程安全的，后续改为线程安全的。
+	static Log log;
 	return log;
 }
 
@@ -138,7 +138,6 @@ int Log::swapBuff(){
 
 Log::~Log()
 {
-	pthread_join(tid, NULL);
 	delete [] pf;
 	delete [] pb;
 }
@@ -186,23 +185,9 @@ void Log::writeLog()
 		bindex = 0;
 	}
 }
-//在线程里面执行的函数不能是此有对象的，会导致参数名不一致
-void* Log::runLog(void *arg)
-{
-	Log *pLog = (Log *)arg;
-	while (true){
-		//每隔两秒写一次buff
-		sleep(2);
-		//std::cout<<"sleep 2"<<std::endl;
-		pLog->writeLog();
-	}
-	return NULL;
-}
-void Log::threadCreate(){
-	std::cout<<"befor construct"<<std::endl;
-	pthread_create(&(Log::getLog().tid), NULL,Log::runLog, (void*)&Log::getLog());
-	std::cout<<"after construct"<< Log::getLog().tid<<std::endl;
-}
+
+
+
 
 
 

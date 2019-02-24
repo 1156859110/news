@@ -23,7 +23,6 @@ private:
    	static int level;
 	
 public:
-  static pthread_t tid;
     Log &operator<<(bool);
 
     Log &operator<<(unsigned char);
@@ -40,8 +39,6 @@ public:
     Log &operator<<(short);
 
     Log &operator<<(const std::string &);
-	
-	
 	Log():
 		bufsize(1024*1000),
 		pf(new char[bufsize]),
@@ -63,16 +60,13 @@ public:
 		level = lev;
 		return 0;
 	}
-	static void* runLog(void *arg);
-	static void threadCreate();
 	 ~Log();
-	
 };
 #define LOG_DEBUG if(Log::getLevel() >= DEBUG)\
-    Log::getLog()<<__FILE__<<__LINE__<<Log::getTimeVal()
+    Log::getLog()<<__FILE__<<"line "<<__LINE__<<"ts "<<Log::getTimeVal()
 #define LOG_INFO  if(Log::getLevel() >= INFO)\
-    Log::getLog()<<__FILE__<<__LINE__<<Log::getTimeVal()
+    Log::getLog()<<__FILE__<<"line "<<__LINE__<<"ts "<<Log::getTimeVal()
 #define LOG_ERROR if(Log::getLevel() >= ERROR)\
-    Log::getLog()<<__FILE__<<__LINE__<<Log::getTimeVal()
+    Log::getLog()<<__FILE__<<"line "<<__LINE__<<"ts "<<Log::getTimeVal()
 
 #endif

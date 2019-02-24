@@ -8,6 +8,7 @@
 #include "threadPool.h"
 #include "dispatch.h"
 #include "mysqlDb.h"
+#include "timerTask.h"
 
 void daemonize(void (*function)())
 {
@@ -52,8 +53,12 @@ void daemonize(void (*function)())
 }
 void serverInit()
 {
-	//Log::setLevel(ERROR);
-	//Log::threadCreate();
+	/*2000秒更新缓存*/
+	TimerTask::addTimerTask(std::bind(&Cache::callback),100);
+	/*20秒写一次日志*/
+	TimerTask::addTimerTask(std::bind(&Log::writeLog,&Log::getLog()),10);
+	TimerTask::start();
+	
 	ThreadPool pool;
 	Dispatch dispatch(&pool);
 	dispatch.runDispatch();
