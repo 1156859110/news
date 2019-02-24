@@ -39,16 +39,19 @@ def checkUrl(cur,url):
     
 
 def writeDatabase(cur, url,filter):
+        if(url.find('?') != -1):
+             return
         article = Article(url,language = 'zh')
         article.download()
         article.parse()
         #print(article.title)
-        print("\n")
+        #print("\n")
         #print(article.top_image)
-        print("\n")
+        #print("\n")
         #print(len(article.text))
-        print("\n")
-         
+        #print("\n")
+        temp = re.sub(r"\s{2,}", "<br /><br />&emsp;&emsp;", article.text)
+        text = "&emsp;&emsp;" + temp
         #需要去除短小无效内容以及重复的url,
         if filter and len(article.text) < 500:
             return
@@ -59,13 +62,13 @@ def writeDatabase(cur, url,filter):
             if(article.top_image.find('.jpg') == -1):
                 bimg = 0
                 cur.execute("""INSERT INTO  newstable(title,bimg,pubdate, url,article)VALUES (%s, %s, %s,%s, %s)""",
-                (article.title,bimg,pubdate,article.url,article.text))
+                (article.title,bimg,pubdate,article.url,text))
             else:
                 bimg = 1
                 cur.execute(
                 """INSERT INTO  newstable(title,bimg,pubdate, url,article)
                 VALUES (%s, %s,%s, %s, %s)""",
-                (article.title,bimg,pubdate,article.url,article.text))
+                (article.title,bimg,pubdate,article.url,text))
                 #下载图片并重新命名为
                 image = checkUrl(cur,url)
                 #print(image)
