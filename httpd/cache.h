@@ -1,6 +1,7 @@
 #ifndef _CACHE_H_
 #define _CACHE_H_
 class OrmTable;
+
 enum EKEYTYPE{
 	EDEFAULT = 0,
 	EIMG,
@@ -8,14 +9,7 @@ enum EKEYTYPE{
 	EPAGE,
 };
 class Cache{
-private:
-	static std::unordered_map<std::string, OrmTable>newsmap;
-	static int cachenum;
-	static std::mutex mtx;
-	//static pthread_rwlock_t rwlock;
-	static int curid;
-	static int preid;
-	
+
 public:
 	static int getSection1(std::string &s1);
 	static int getSection2Page(int key,std::string &s2);
@@ -29,7 +23,13 @@ public:
 	static int decodeSkey(std::string &skey,EKEYTYPE &etype);
 	static void updateCache();
 	static void callback();
-	
+private:
+	static std::unordered_map<std::string, OrmTable>newsmap;
+	static int cachenum;
+	static std::mutex mtx;
+	//static pthread_rwlock_t rwlock;
+	static int curid;
+	static int preid;
 };
 #endif
 

@@ -1,6 +1,7 @@
 #include "common.h"
 #include "mysqlDb.h"
 #include "cache.h"
+#include "log.h"
 
 int Cache::cachenum = 100;//存放最近100条数据,preid---curid之间的数据
 int Cache::curid = 0;
@@ -38,7 +39,8 @@ int Cache::decodeSkey(std::string &skey,EKEYTYPE &etype){
 		etype = EIMG;
 	}
 	if(etype != EIMG) ++visitors;
-	std::cout <<key <<" keys: type "<< etype<< '\n';
+	//std::cout <<key <<" keys: type "<< etype<< '\n';
+	LOG_DEBUG <<key <<" keys: type "<< etype<< '\n';
 	return key;
 }
 std::string Cache::getImages(std::string &skey){
@@ -47,33 +49,33 @@ std::string Cache::getImages(std::string &skey){
 	{
 		std::lock_guard<std::mutex> locker(mtx);
 		if(newsmap.find(skey) != newsmap.end()){
-			otb = newsmap[skey];
+			otb                  = newsmap[skey];
 		}
 	}
 	if(otb.simg == ""){
-		std::string filename = "/root/news/image/"+skey;
+		std::string filename  = "/root/news/image/"+skey;
 		std::ifstream sfp(filename,std::ifstream::in);
 		if(sfp.is_open()){
 			std::stringstream temp;
 			temp << sfp.rdbuf();
 			std::string header;
-			header += "HTTP/1.1 200 OK\r\nServer: husk's news server\r\n";
-			header += "Cache-control: only-if-cached\r\n";
-			header += "Content-length:   "+ std::to_string(temp.str().size())  + " \r\n";
+			header              += "HTTP/1.1 200 OK\r\nServer: husk's news server\r\n";
+			header              += "Cache-control: only-if-cached\r\n";
+			header              += "Content-length:   "+ std::to_string(temp.str().size())  + " \r\n";
 			if(skey.find(".jpg") != std::string::npos){
-				header += "Content-Type: image/jpg\r\nConnection: Keep-Alive\r\n\r\n";
+				header             += "Content-Type: image/jpg\r\nConnection: Keep-Alive\r\n\r\n";
 			}else if(skey.find(".css") != std::string::npos){
-				header += "Content-Type: text/css\r\nConnection: Keep-Alive\r\n\r\n";
+				header             += "Content-Type: text/css\r\nConnection: Keep-Alive\r\n\r\n";
 			}else{
-				header += "Content-Type: text/html\r\nConnection: Keep-Alive\r\n\r\n";
+				header             += "Content-Type: text/html\r\nConnection: Keep-Alive\r\n\r\n";
 			}
-			header += temp.str();
+			header              += temp.str();
 			//atoi直接返回已经读取转换后多整数。如123.jpg == 123
-			int ikey = atoi(skey.c_str());
+			int ikey             = atoi(skey.c_str());
 			if(ikey > preid || ikey == 0){
 				std::lock_guard<std::mutex> locker(mtx);
-				newsmap[skey].simg = header;
-				newsmap[skey].bimg = true;
+				newsmap[skey].simg  = header;
+				newsmap[skey].bimg  = true;
 			}
 			return header;
 		}else{
@@ -165,8 +167,8 @@ int Cache::getSection2Page(int key,std::string &s2){
 		while(start >0 && i < PAGESIZE){
 			OrmTable otb = newsmap[std::to_string(start)];
 			if(i == 0) s2 += "<ul class=\"list_url\">";
-			//std::cout<<" sid start"<<start;
-			//std::cout<<otb.sid<<" sid "<<otb.stitle<<" stitle "<<otb.spubdate<<" spubdate"<<std::endl;
+			////std::cout<<" sid start"<<start;
+			////std::cout<<otb.sid<<" sid "<<otb.stitle<<" stitle "<<otb.spubdate<<" spubdate"<<std::endl;
 			s2+= "<li><a href=\"article";
 			s2+= otb.sid;
 			s2+= "\">";
@@ -304,14 +306,14 @@ void Cache::updateCache(){
 	MysqlDb *pdb = new MysqlDb(std::to_string(curid));
 	if(!pdb->init()){
 		//send busy;
-		std::cout<<" access db error\n";
+		//std::cout<<" access db error\n";
 	}
 	//std::unique_lock<std::shared_mutex> lock(rwlock);
 	std::unordered_map<std::string,OrmTable> tempmap = pdb->queryTitle();
 	delete pdb;
 	int id = tempmap.size();
 	if(id <= 0){
-		std::cout<<"no more news"<<'\n';
+		//std::cout<<"no more news"<<'\n';
 	}else{
 		std::lock_guard<std::mutex> locker(mtx);
 		//tempmap里面的元素不会更新newsmap,如果重复
@@ -330,7 +332,8 @@ void Cache::updateCache(){
 			preid = temid;
 		}
 	}
-	std::cout<<" cur id is"<< curid<<"pre id is "<<preid<<'\n';
+	//std::cout<<" cur id is"<< curid<<"pre id is "<<preid<<'\n';
+	LOG_DEBUG<<" cur id is"<< curid<<"pre id is "<<preid<<'\n';
 }		   
 void Cache::callback(){
 	updateCache();

@@ -9,11 +9,8 @@ Epoll::~Epoll(){
 	delInEvents(rpipe);
 }
 std::vector<struct epoll_event> Epoll::epollWait(int waittime){
-	std::cout<<evts.size()<<" events size"<<std::endl; 
-	int num = epoll_wait(epfd,&evts[0],(int)evts.size(),waittime);
-	std::vector<struct epoll_event>v(evts.begin(),evts.begin() + num);
-	std::cout<<num<<" active events"<<std::endl; 
-	LOG_DEBUG<<num<<" active events\n"; 
+	int num = epoll_wait(epfd,&vevent[0],(int)vevent.size(),waittime);
+	std::vector<struct epoll_event>v(vevent.begin(),vevent.begin() + num);
 	return v; 
 }
 int Epoll::addInEvents(int fd){
@@ -21,11 +18,11 @@ int Epoll::addInEvents(int fd){
 	struct epoll_event ev;
 	ev.data.fd = fd;
 	ev.events = EPOLLIN;
-	evts.push_back(ev);
-	std::cout<<evts.size()<<" epoll events "<<std::endl;
+	vevent.push_back(ev);
+	//std::cout<<vevent.size()<<" epoll events "<<std::endl;
 	if((rc = epoll_ctl(epfd,EPOLL_CTL_ADD,fd,&ev)) < 0){
-		 LOG_ERROR<<"add in epoll error";
-		 std::cout<<"add in epoll error"<<std::endl;
+		 LOG_ERROR<<"add epoll in events error";
+		 //std::cout<<"add epoll in events error"<<std::endl;
 	}     
 	return rc;       
 }
@@ -34,7 +31,7 @@ int Epoll::delInEvents(int fd){
 	struct epoll_event ev;
 	ev.data.fd = fd;
 	ev.events = EPOLLIN;
-	evts.pop_back();
+	vevent.pop_back();
 	if((rc = epoll_ctl(epfd,EPOLL_CTL_DEL,fd,&ev)) < 0){
 		 LOG_ERROR<<"epoll in del error";
 	}     
@@ -46,8 +43,8 @@ int Epoll::addOutEvents(int fd){
 	ev.data.fd = fd;
 	ev.events = EPOLLIN|EPOLLOUT;
 	if((rc = epoll_ctl(epfd,EPOLL_CTL_MOD,fd,&ev)) < 0){
-		 LOG_ERROR<<"add out epoll error";
-		 std::cout<<"add out epoll error"<<std::endl;
+		 LOG_ERROR<<"add out epoll out events  error";
+		 //std::cout<<"add out epoll out events  error"<<std::endl;
 	}     
 	return rc;       
 }
@@ -58,7 +55,7 @@ int Epoll::delOutEvents(int fd){
 	ev.events = EPOLLIN;
 	if((rc = epoll_ctl(epfd,EPOLL_CTL_MOD,fd,&ev)) < 0){
 		 LOG_ERROR<<"del out events error";
-		 std::cout<<"del out events error"<<std::endl;
+		 //std::cout<<"del out events error"<<std::endl;
 	}     
 	return rc;       
 }

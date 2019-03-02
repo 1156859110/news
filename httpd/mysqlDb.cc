@@ -1,5 +1,6 @@
 #include "common.h"
 #include "mysqlDb.h"
+#include "log.h"
  
 const char HOST[] = "65.49.226.144" ;
 const char USER[] = "root" ;
@@ -9,29 +10,38 @@ const int PORT = 3306;
 
 
 MysqlDb::MysqlDb():mysql(NULL),row(NULL),result(NULL),skey("0"){
-  mysql = mysql_init(NULL);
-  if(mysql == NULL) std::cout << "Error: " << mysql_error(mysql);   
-  
+	mysql = mysql_init(NULL);
+	if(mysql == NULL){
+		//std::cout << "Error: " << mysql_error(mysql)<<"\n";  
+		LOG_ERROR << "Error: " << mysql_error(mysql)<<"\n";  
+	} 
 }
 MysqlDb::MysqlDb(std::string sid):mysql(NULL),row(NULL),result(NULL),skey(sid){
-  mysql = mysql_init(NULL);
-  if(mysql == NULL) std::cout << "Error: " << mysql_error(mysql);   
+	
+	mysql = mysql_init(NULL);
+	if(mysql == NULL) {
+		//std::cout << "Error: " << mysql_error(mysql)<<"\n"; 
+		LOG_ERROR << "Error: " << mysql_error(mysql)<<"\n";  
+	}  
 }
 MysqlDb::~MysqlDb(){                                                           
-  if(mysql) mysql_close(mysql);
+	if(mysql) mysql_close(mysql);
 }
  
 bool MysqlDb::init(){
 	if(mysql == NULL) {
-		std::cout << "construct error: "<<std::endl;
+		//std::cout << "mysql init error: \n";
+		LOG_ERROR << "mysql init error: \n";
 		return false;
 	}
 	if(!mysql_real_connect(mysql,HOST,USER,PWD,DBNAME,PORT,NULL,0)){
-		std::cout<< "connect error " << mysql_error(mysql);
+		//std::cout<< "connect mysql error " << mysql_error(mysql)<<"\n";
+		LOG_ERROR<< "connect mysql error " << mysql_error(mysql)<<"\n";
 		return false;
 	}
     if (mysql_set_character_set(mysql, "utf8" ) ) { 
-    	std::cout<< "set utf8 error "<<mysql_error(mysql); 
+    	//std::cout<< "set utf8 error "<<mysql_error(mysql)<<'\n'; 
+		LOG_ERROR<< "set utf8 error "<<mysql_error(mysql)<<'\n'; 
     } 
 	return true;
 }
@@ -41,7 +51,8 @@ std::string MysqlDb::queryArticle(){
 	sql += skey;
 	//返回0表示成功。
 	if(mysql_query(mysql,sql.c_str())){
-		std::cout << "query fail: " << mysql_error(mysql)<<std::endl;  
+		//std::cout << "query fail: " << mysql_error(mysql)<<std::endl;  
+		LOG_ERROR << "query article fail: " << mysql_error(mysql)<<"\n";  
 		return NULL;                                     
 	}
 	else{
@@ -50,7 +61,7 @@ std::string MysqlDb::queryArticle(){
 		std::string str;
 		str += row[0];
 		//strcpy(particle,row[0]);
-		//std::cout << row[0]<<" "<<std::endl;
+		////std::cout << row[0]<<" "<<std::endl;
 		mysql_free_result(result);
 		return str;
 	}
@@ -62,7 +73,8 @@ std::unordered_map<std::string, OrmTable> MysqlDb::queryTitle()
 	//sql += " order by id desc ";
 	std::unordered_map<std::string, OrmTable> dbmap;
 	if(mysql_query(mysql,sql.c_str())){
-		std::cout << "query fail: " << mysql_error(mysql);                                          
+		//std::cout << "query fail: " << mysql_error(mysql);  
+		LOG_ERROR << "query title fail: " << mysql_error(mysql)<<"\n";                                        
 	}
 	else{
 		bool bid = true;
@@ -76,7 +88,7 @@ std::unordered_map<std::string, OrmTable> MysqlDb::queryTitle()
 				bid = false;
 			}
 			OrmTable otb;
-			//std::cout<<row[0]<<" "<<row[1]<<" "<<row[2]<<" "<<row[3]<<" "<<std::endl;
+			////std::cout<<row[0]<<" "<<row[1]<<" "<<row[2]<<" "<<row[3]<<" "<<std::endl;
 			otb.sid += row[0];
 			otb.stitle += row[1];
 			otb.bimg = atoi(row[2]);

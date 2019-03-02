@@ -24,9 +24,22 @@ user=jeffrey&pwd=1234  //此行为提交的数据
 enum { OK = 0, ERR ,UNFINISHED,FINISHED,REQUEST, HEADER, CONTENT};	
 const int BUFSIZE = 1024;
 
-Parser::Parser(int ifd):fd(ifd),writeindex(0),wbufsize(0),readindex (0),curindex (0),preindex (0),
-state(REQUEST),readbuf(new char[BUFSIZE+1]),writebuf(NULL),contentlen(0),method("UNKNOWN"),
-version("UNKNOWN"),skey(""),contenttype("UNKNOWN"){
+Parser::Parser(int ifd):
+	fd(ifd),
+	writeindex(0),
+	wbufsize(0),
+	readindex (0),
+	curindex (0),
+	preindex (0),
+	state(REQUEST),
+	readbuf(new char[BUFSIZE+1]),
+	writebuf(NULL),
+	contentlen(0),
+	method("UNKNOWN"),
+	version("UNKNOWN"),
+	skey(""),
+	contenttype("UNKNOWN")
+	{
 	memset(readbuf,0,sizeof(BUFSIZE));
 };
 
@@ -61,7 +74,8 @@ int Parser::parseReqline(char *pbuf)
 	else{
 		method = "UNKNOWN";
     }
-	std::cout<<"method is"<<method<<std::endl;
+	//std::cout<<"method is "<<method<<std::endl;
+	LOG_DEBUG<<"method is "<<method<<"\n";
 	//需要清除上次的skey
 	skey = "";
 	pbuf += 2;
@@ -70,7 +84,8 @@ int Parser::parseReqline(char *pbuf)
 		++pbuf;
 	}
 	if(skey == "") skey = "page1";
-	std::cout<<"skey is"<<skey<<std::endl;
+	//std::cout<<"skey is"<<skey<<std::endl;
+	LOG_INFO<<"request key is "<<skey<<"\n";
 	++pbuf;//指向httpversion
     if (strncasecmp(pbuf, "HTTP/1.1" ,8) == 0 ){
     	version = "HTTP/1.1";
@@ -81,7 +96,8 @@ int Parser::parseReqline(char *pbuf)
 	else{
 		version = "UNKNOWN";
 	}
-	std::cout<<"version is "<<version<<std::endl;
+	//std::cout<<"version is "<<version<<std::endl;
+	LOG_DEBUG<<"version is "<<version<<"\n";
     return OK;
 }
 
@@ -103,8 +119,8 @@ int Parser::parseHeaders(char *pbuf)
     return UNFINISHED;
 }
 int Parser::parseContent(){
-	std::cout<<"content len "<< contentlen<<std::endl;
-	LOG_DEBUG<<"content len "<< contentlen;
+	//std::cout<<"content len "<< contentlen<<std::endl;
+	LOG_DEBUG<<"content len "<< contentlen<<"\n";
 
 	if(curindex + contentlen > readindex){
 		contentlen -= readindex-curindex;
@@ -119,11 +135,13 @@ int Parser::parseContent(){
 }
 int Parser::parseStart(){
 	char* pbuf = NULL;
-	std::cout<<readindex<<"read index "<<std::endl;
+	//std::cout<<readindex<<" read index "<<std::endl;
+	LOG_DEBUG<<readindex<<" read index \n";
 	while(curindex < readindex){
 		while(state == REQUEST || state == HEADER){
 			if(parseLine() != OK) return -1;
-			std::cout<<curindex<<"cur index "<<std::endl;
+			//std::cout<<" cur index is "<<curindex<<std::endl;
+			LOG_DEBUG<<" cur index is "<<curindex<<"\n";
 			pbuf     = readbuf + preindex;
 			preindex = curindex;
 			switch (state){
@@ -144,10 +162,10 @@ int Parser::parseStart(){
 		parseContent();
 		if(state == FINISHED){
 			getResponse();
-			std::cout<<curindex<<" "<<readindex<<"curindex  readindex "<<std::endl;
+			//std::cout<<"curindex is "<<curindex<<" readindex is "<<readindex<<std::endl;
+			LOG_INFO<<"curindex is "<<curindex<<" readindex is "<<readindex<<"\n";
 			state = REQUEST;
 		}
-		
 	}
 	return 0;
 }
@@ -163,13 +181,15 @@ bool Parser::readRequest(){
    int readdata = read(fd, readbuf + readindex,  BUFSIZE - readindex);
    //返回为0，说明连接关闭。
    if(readdata <= 0 ) {
-	   std::cout<<readdata<<" read data error "<<std::endl;
+	   //std::cout<<readdata<<" remote connection is closed\n";
+	   //std::cout<<readdata<<" remote connection is closed\n ";
 	   return false;
    }
    readindex += readdata;
    //需要多开辟一个字节
    readbuf[readindex] = '\0';
-   std::cout<<readdata<<" data read to buff \n"<<readbuf + readindex - readdata<<std::endl;
+   //std::cout<<readdata<<" data read to buff \n"<<readbuf + readindex - readdata<<std::endl;
+   LOG_DEBUG<<readdata<<" data read to buff \n"<<readbuf + readindex - readdata<<"\0";
    parseStart();
    return true;
 }
@@ -181,23 +201,23 @@ int Parser::getResponse(){
 	for(auto &it:v){
 		sendlist.push_back(it);
 	}
-	
-	//std::cout<<psend<<" data"<<std::endl;
-	//std::cout<<size<<" ptr size"<<std::endl;
     return 0;
 }
 bool Parser::sendResponse(){
 	bool bcontinue = false;
 	do{
-		std::cout <<"list size is "<<sendlist.size()<<std::endl;
+		//std::cout <<"send list size is "<<sendlist.size()<<std::endl;
+		LOG_DEBUG <<"send list size is "<<sendlist.size()<<"\n";
 		if(sendlist.empty()) return true;
 		std::string sendbufs = sendlist.front();
 		wbufsize = sendbufs.size();
-		std::cout<<" fd " <<fd<<" buf size " <<wbufsize<<" write index"<<writeindex<<std::endl;
+		//std::cout<<" fd " <<fd<<" send buf size is " <<wbufsize<<" write index is "<<writeindex<<std::endl;
+		LOG_DEBUG<<" fd " <<fd<<" send buf size is " <<wbufsize<<" write index is "<<writeindex<<"\n";
 	    int writedata = write(fd, sendbufs.c_str() + writeindex,wbufsize - writeindex);
 		if(writedata < 0) return false;
 	    writeindex += writedata;
-		std::cout<<fd <<" wite fd"<<writedata<<" write data" <<std::endl;
+		//std::cout<<"fd "<<fd <<" write data "<<writedata<<"\n";
+		LOG_DEBUG<<"fd "<<fd <<" write data "<<writedata<<"\n";
 		bcontinue  = (writeindex == wbufsize)?true:false;
 		if(writeindex == wbufsize){
 			writeindex = 0;
@@ -208,12 +228,3 @@ bool Parser::sendResponse(){
 	
 	return writeindex == wbufsize;
 }
-
-
-
-
-
-
-
-
-

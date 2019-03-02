@@ -2,16 +2,8 @@
 
 #define _THREAD_POOL_H_
 
-//class EventThread;
-
 class ThreadPool
 {
-private:
-	bool bdestroy;
-	int threadnum;
-	std::vector<EventThread *>pevtthrd;
-	std::vector<pthread_t>tid;
-	unsigned int count ;
 public:
 	ThreadPool();
 	ThreadPool(int tnum);
@@ -19,6 +11,12 @@ public:
 	int getThreadNum();
 	void notify();
 	EventThread* getEventThread();
+private:
+	bool bdestroy;
+	int threadnum;
+	std::vector<EventThread *>vethreads;
+	std::vector<pthread_t>vtid;
+	unsigned int count ;
 };
 
 #endif

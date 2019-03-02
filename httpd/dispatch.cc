@@ -30,6 +30,7 @@ int Dispatch::bindListen(){
   
 	if ((listenfd = socket(AF_INET, SOCK_STREAM, 0)) < 0){
 		LOG_ERROR<<"socket set error\n";
+		//std::cout<<"socket set error\n";
 		exit(1);
 	}
 	/*timewait状态立马复用*/
@@ -43,14 +44,16 @@ int Dispatch::bindListen(){
 	
 	if (bind(listenfd, (const struct sockaddr *)&serveraddr, sizeof(serveraddr)) < 0){
 		LOG_ERROR<<"bind error\n";
+		//std::cout<<"bind error\n";
 		exit(1);
 	}
 	if (listen(listenfd, LISTENQ) < 0){
 		LOG_ERROR<<"listen error\n";
+		//std::cout<<"listen error\n";
 		exit(1);
 	}
-	std::cout<<"listenfd is "<<listenfd<<std::endl;
-	LOG_INFO<<"listenfd is "<<listenfd;
+	//std::cout<<"listenfd is "<<listenfd<<std::endl;
+	LOG_INFO<<"listenfd is "<<listenfd<<"\n";
 	return 0;
 }
 Dispatch::Dispatch(ThreadPool* pool):port(80),pthrdpool(pool){
@@ -69,18 +72,15 @@ void Dispatch::runDispatch(){
 	struct sockaddr_in clientaddr;
 	EventThread *pevthrd = NULL;
 	int connfd = 0;
-	std::cout<<"run dispatch "<<pepoll<<std::endl;
 	 while(true){
 		 pepoll->epollWait(-1);
-		  //std::cout << "new thread pool " << pthrdpool<< std::endl;
 		 while((connfd=accept(listenfd,(struct sockaddr*)&clientaddr, &clientlen)) > 0){
-			 std::cout << "new connection fd " << connfd<< std::endl;
+			 //std::cout << "new connection fd " << connfd<< std::endl;
 			 LOG_DEBUG << "new connection fd " <<connfd<<"\n";
 			 setNonBlocking(connfd);
 			 pevthrd =  pthrdpool->getEventThread();
 			 pevthrd->addConList(connfd);
 		 }	
-		
 		pthrdpool->notify();
 	 }                              
 }

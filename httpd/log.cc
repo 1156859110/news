@@ -29,7 +29,6 @@ void Log::appendInteger(T i)
     int len = intTostr(temp, i);
     append(temp, len);
 }
-
 Log& Log::operator<<(unsigned int i)
 {
     appendInteger(i);
@@ -70,8 +69,6 @@ Log& Log::operator<<(short i)
     appendInteger(i);
     return *this;
 }
-
-
 Log& Log::operator<<(bool b) {
     append(b ? "1" : "0", 1);
     return *this;
@@ -135,13 +132,6 @@ int Log::swapBuff(){
 	}	
 	return 0;
 }
-
-Log::~Log()
-{
-	delete [] pf;
-	delete [] pb;
-}
-
 void Log::append(const char *pchar, int len)
 {
     if(len + findex > bufsize){
@@ -185,9 +175,3 @@ void Log::writeLog()
 		bindex = 0;
 	}
 }
-
-
-
-
-
-

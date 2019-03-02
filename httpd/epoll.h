@@ -2,10 +2,7 @@
 #ifndef _EPOLL_H_
 #define _EPOLL_H_
 class Epoll{
-private:
-	int epfd;
-	int rpipe;
-	std::vector<struct epoll_event>evts;
+
 public:
 	Epoll(int pfd);
 	~Epoll();
@@ -18,6 +15,10 @@ public:
 	int addOutEvents(int fd);
 	
 	int delOutEvents(int fd);
+private:
+	int epfd;
+	int rpipe;
+	std::vector<struct epoll_event>vevent;
 	
 };
 #endif

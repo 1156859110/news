@@ -3,10 +3,6 @@
 
 class Timer
 {
-private:
-	int preexp;
-	int curexp;
-	int fd;
 public:
 	Timer(int ifd,int timeout);
 	Timer(int ifd);
@@ -19,6 +15,10 @@ public:
 	int getPreexp() const;
 	int getFd() const;
 	static int getTime();
+private:
+	int preexp;
+	int curexp;
+	int fd;
 };
 
 struct cmptimer{
@@ -28,14 +28,14 @@ struct cmptimer{
 };
 class TimerHeap
 {
-private:
-	std::priority_queue<Timer*,std::vector<Timer*>, cmptimer>timerheap;
 public:
 	TimerHeap(){};
 	~TimerHeap(){};
 	Timer* getHeap();
 	void pushHeap(Timer *ptimer);
 	void popHeap();
+private:
+	std::priority_queue<Timer*,std::vector<Timer*>, cmptimer>timerheap;
 };
 #endif
 

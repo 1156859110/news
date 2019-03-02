@@ -2,7 +2,7 @@
 #include "log.h"
 #include "timer.h"
 
-const int DEFAULT = 5000;//120s
+const int DEFAULT = 120000;//120s
 Timer::Timer(int ifd,int timeout):fd(ifd){
     preexp = getTime() + timeout;
 	curexp = preexp;
@@ -47,10 +47,9 @@ int Timer::getFd() const{
 
 Timer* TimerHeap::getHeap(){
 	if(!timerheap.empty()){
-		std::cout<<"timer heap "<<timerheap.top()<<std::endl;
 		return timerheap.top();
 	}
-	std::cout<<"timer heap NULL"<<std::endl;
+	//std::cout<<"timer heap NULL"<<std::endl;
 	return NULL;
 }
 void TimerHeap::pushHeap(Timer *ptimer){
