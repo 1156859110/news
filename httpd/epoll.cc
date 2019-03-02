@@ -8,7 +8,6 @@ Epoll::Epoll(int pfd):epfd(epoll_create(1)),rpipe(pfd){
 Epoll::~Epoll(){
 	delInEvents(rpipe);
 }
-//todo evts的size一直增加会不会有问题？，需要处理
 std::vector<struct epoll_event> Epoll::epollWait(int waittime){
 	std::cout<<evts.size()<<" events size"<<std::endl; 
 	int num = epoll_wait(epfd,&evts[0],(int)evts.size(),waittime);
@@ -35,8 +34,7 @@ int Epoll::delInEvents(int fd){
 	struct epoll_event ev;
 	ev.data.fd = fd;
 	ev.events = EPOLLIN;
-	//todo 这里需要释放空间
-	//evts.push_back(0);
+	evts.pop_back();
 	if((rc = epoll_ctl(epfd,EPOLL_CTL_DEL,fd,&ev)) < 0){
 		 LOG_ERROR<<"epoll in del error";
 	}     

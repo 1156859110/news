@@ -6,16 +6,14 @@
 class OrmTable{
 public:
 	std::string sid;
-	int artlen;
-	int imglen;
 	int cnt;
 	std::string stitle;
 	bool bimg;
 	std::string spubdate;
-	char *particle;
-	char *pimg;
-	OrmTable();
-	~OrmTable();
+	std::string sarticle;
+	std::string simg;
+	OrmTable():sid(""),cnt(0),stitle(""),bimg(false),spubdate(""),sarticle(""),simg(""){};
+	~OrmTable(){};
 };
 
 
@@ -27,7 +25,7 @@ public:
 	~MysqlDb();
 	bool init();         
 	std::string queryArticle();
-	int queryTitle(std::unordered_map<std::string, OrmTable> &dbmap);
+	std::unordered_map<std::string, OrmTable>queryTitle();
 private:
 	std::string skey;      
 	MYSQL* mysql;

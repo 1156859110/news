@@ -7,15 +7,7 @@ const char PWD[] = "news/123" ;
 const char DBNAME[] = "news" ;
 const int PORT = 3306;
 
-OrmTable::OrmTable():sid(""),artlen(0),imglen(0),cnt(0),stitle(""),bimg(false),spubdate(""){
-	//todo 待修改
-	particle = NULL;
-	pimg = NULL;
-}
-OrmTable::~OrmTable(){
-	//particle = NULL;
-	//pimg = NULL;
-}
+
 MysqlDb::MysqlDb():mysql(NULL),row(NULL),result(NULL),skey("0"){
   mysql = mysql_init(NULL);
   if(mysql == NULL) std::cout << "Error: " << mysql_error(mysql);   
@@ -63,15 +55,14 @@ std::string MysqlDb::queryArticle(){
 		return str;
 	}
 }
-int MysqlDb::queryTitle(std::unordered_map<std::string, OrmTable> &dbmap)
+std::unordered_map<std::string, OrmTable> MysqlDb::queryTitle()
 {
 	std::string sql("SELECT id,title,bimg,pubdate FROM newstable WHERE id > ");
 	sql += skey;
-	sql += " order by id desc ";
-	
+	//sql += " order by id desc ";
+	std::unordered_map<std::string, OrmTable> dbmap;
 	if(mysql_query(mysql,sql.c_str())){
-		std::cout << "query fail: " << mysql_error(mysql);   
-		return -1;                                          
+		std::cout << "query fail: " << mysql_error(mysql);                                          
 	}
 	else{
 		bool bid = true;
@@ -90,12 +81,13 @@ int MysqlDb::queryTitle(std::unordered_map<std::string, OrmTable> &dbmap)
 			otb.stitle += row[1];
 			otb.bimg = atoi(row[2]);
 			otb.spubdate += row[3];
-			otb.particle = NULL;
-			otb.pimg = NULL;
+			otb.sarticle = "";
+			otb.simg = "";
 			dbmap[otb.sid] = otb;
 		}
 		mysql_free_result(result);
-		return bid?0:atoi(cursid.c_str());
+		//return bid?0:atoi(cursid.c_str());
 	}
+	return dbmap; 
 }
 

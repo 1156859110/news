@@ -161,9 +161,11 @@ void EventThread::delExpEvents(){
 		timerheap.popHeap();
 		pparser = fd2pmap[ptimer->getFd()].second;
 		delete pparser;
-		fd2pmap.erase(ptimer->getFd());
-		close(ptimer->getFd());
-		std::cout<<"close fd "<<ptimer->getFd()<<std::endl;
+		int fd = ptimer->getFd();
+		fd2pmap.erase(fd);
+		close(fd);
+		pepoll->delInEvents(fd);
+		std::cout<<"close fd "<<fd<<std::endl;
 		delete ptimer;
 		ptimer = timerheap.getHeap();
 	}

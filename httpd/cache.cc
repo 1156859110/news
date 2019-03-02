@@ -1,19 +1,26 @@
 #include "common.h"
-
+#include "mysqlDb.h"
 #include "cache.h"
 
-int Cache::cachenum = 100;//存放最近100条数据
+int Cache::cachenum = 100;//存放最近100条数据,preid---curid之间的数据
 int Cache::curid = 0;
+int Cache::preid = 0;
 int visitors = 0;
 std::unordered_map<std::string, OrmTable> Cache::newsmap;
-std::mutex Cache::Cachemtx;
-//c++11不支持读写锁
+std::mutex Cache::mtx;
+//c++11不支持读写锁，用linux pthread实现
+//pthread_rwlock_t rwlock;
+//pthread_rwlock_init(&rwlock,NULL);
+//pthread_rwlock_rdlock(&rwlock);//获取读取锁
+//pthread_rwlock_unlock(&rwlock);   
+//pthread_rwlock_wrlock(&rwlock);
+//pthread_rwlock_unlock(&rwlock);
 //std::shared_mutex rwlock;
+
 const int PAGESIZE = 20;
 const int TOPN = 5;
 
-//std::lock_guard<std::mutex> locker(Cachemtx);
-//mapA.insert(mapB.begin(), mapB.end()) b里面的元素不会更新a
+
 int Cache::decodeSkey(std::string &skey,EKEYTYPE &etype){
 	int size = skey.size();
 	int key = 0;
@@ -34,32 +41,48 @@ int Cache::decodeSkey(std::string &skey,EKEYTYPE &etype){
 	std::cout <<key <<" keys: type "<< etype<< '\n';
 	return key;
 }
-//todo 后续改为指针
 std::string Cache::getImages(std::string &skey){
+	OrmTable otb;
 	//std::shared_lock<std::shared_mutex> lock(rwlock);
-	OrmTable otb = newsmap[skey];
-	if(newsmap[skey].pimg == NULL){
-		std::string filename = "/root/news/image/"+skey;
-		std::ifstream sfp(filename);
-		std::stringstream temp;
-		temp << sfp.rdbuf();
-		std::string header;
-		header += "HTTP/1.1 200 OK\r\nServer: husk's news server\r\n";
-		header += "Cache-control: only-if-cached\r\n";
-		header += "Content-length:   "+ std::to_string(temp.str().size())  + " \r\n";
-		if(skey.find(".jpg") != std::string::npos){
-			header += "Content-Type: image/jpg\r\nConnection: Keep-Alive\r\n\r\n";
-		}else if(skey.find(".css") != std::string::npos){
-			header += "Content-Type: text/css\r\nConnection: Keep-Alive\r\n\r\n";
-		}else{
-			header += "Content-Type: text/html\r\nConnection: Keep-Alive\r\n\r\n";
+	{
+		std::lock_guard<std::mutex> locker(mtx);
+		if(newsmap.find(skey) != newsmap.end()){
+			otb = newsmap[skey];
 		}
-		header += temp.str();
-		return header;
-	}else{
-		return " ";
 	}
-} 
+	if(otb.simg == ""){
+		std::string filename = "/root/news/image/"+skey;
+		std::ifstream sfp(filename,std::ifstream::in);
+		if(sfp.is_open()){
+			std::stringstream temp;
+			temp << sfp.rdbuf();
+			std::string header;
+			header += "HTTP/1.1 200 OK\r\nServer: husk's news server\r\n";
+			header += "Cache-control: only-if-cached\r\n";
+			header += "Content-length:   "+ std::to_string(temp.str().size())  + " \r\n";
+			if(skey.find(".jpg") != std::string::npos){
+				header += "Content-Type: image/jpg\r\nConnection: Keep-Alive\r\n\r\n";
+			}else if(skey.find(".css") != std::string::npos){
+				header += "Content-Type: text/css\r\nConnection: Keep-Alive\r\n\r\n";
+			}else{
+				header += "Content-Type: text/html\r\nConnection: Keep-Alive\r\n\r\n";
+			}
+			header += temp.str();
+			//atoi直接返回已经读取转换后多整数。如123.jpg == 123
+			int ikey = atoi(skey.c_str());
+			if(ikey > preid || ikey == 0){
+				std::lock_guard<std::mutex> locker(mtx);
+				newsmap[skey].simg = header;
+				newsmap[skey].bimg = true;
+			}
+			return header;
+		}else{
+			return getErr();
+		}
+	}else{
+		return otb.simg;
+	}
+}
 std::vector<std::string> Cache::getHtml(std::string &skey){
 	
 	EKEYTYPE etype = EDEFAULT;
@@ -69,19 +92,28 @@ std::vector<std::string> Cache::getHtml(std::string &skey){
 	int key = decodeSkey(skey,etype);
 	
 	if(etype == EPAGE){
-		s2 = getSection2Page(key);
+		if(getSection2Page(key,s2)!=0){
+			v.push_back(getErr());
+			return v;
+		}
 	}
 	else if(etype == EARTICLE){
-		s2 = getSection2Article(key);
+		if(getSection2Article(key,s2)!=0){
+			v.push_back(getErr());
+			return v;
+		}
 	}
 	else{
 		//image/css等类型
 		v.push_back(getImages(skey));
 		return v;
 	}
-	std::string s1 = getSection1();
-	std::string s3 = getSection3();
-	std::string s4 = getSection4();
+	std::string s1;
+	getSection1(s1);
+	std::string s3;
+	getSection3(s3);
+	std::string s4;
+	getSection4(s4);
 	std::string s0 = getHeader(s1.size()+s2.size()+s3.size()+s4.size());
 	v.push_back(s0);
 	v.push_back(s1);
@@ -105,59 +137,48 @@ std::string Cache::getHeader(int len)
 std::string Cache::getErr() 
 {
 	std::string err;
-	err += "HTTP/1.1 404 OK\r\n";    
+	err += "HTTP/1.1 404 not found\r\n";    
 	err += "Server: husk's news server\r\n";
 	err += "Content-length: 0 \r\n";
 	err += "Content-Type: text/html\r\n\r\n";
 	return err;                           
 }
-std::string Cache::getSection1() {
-	 std::string s1;
+int Cache::getSection1(std::string &s1) {
 	 s1 +="  <!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\"> ";									
 	 s1 +=" <html xmlns=\"http://www.w3.org/1999/xhtml\"><head><meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\" />";
 	 s1 +=" <title>看客</title><meta name=\"keywords\" content=\"看客新闻\" /><meta name=\"description\" content=\"看客新闻\" />";
 	 s1 +=" <link href=\"index.css\" rel=\"stylesheet\" type=\"text/css\" /></head><body><div id=\"header\"><div id=\"title\">看客</div>";
 	 s1 +=" </div><div id=\"menu\"><a href=\"http://www.kanketech.site\" target=\"_parent\">主页</a></div><div id=\"content_bg\"><div id=\"content\"><div class=\"section_w620 fl\">";
- 	return s1;                 
+ 	return 0;                 
 }
-std::string Cache::getSection2Page(int key){
-	std::string s2;
+int Cache::getSection2Page(int key,std::string &s2){
 	s2 += " <div class=\"title_header\">最新动态</div><div class=\"seperate\"></div>";
 	if(curid == 0){
-		//todo
-		MysqlDb *pdb = new MysqlDb("5000");
-		if(!pdb->init()){
-			//send busy;
-		}
-		//std::unique_lock<std::shared_mutex> lock(rwlock);
-		int id = pdb->queryTitle(newsmap);
-		if(id <= 0){
-			std::cout<<"no more news"<<'\n';
-		}else{
-			curid = id;
-		}
-		std::cout<<" cur id is"<< curid<< '\n';
-		delete pdb;
+		updateCache();
 	}
 	int start = curid - PAGESIZE *(key -1);
-	if(start < 0) start = 0;
+	if(key < 1 || start < 0) return -1;
 	int i = 0;
 	//std::shared_lock<std::shared_mutex> lock(rwlock);
-	while(start >0 && i < PAGESIZE){
-		OrmTable otb = newsmap[std::to_string(start)];
-		if(i == 0) s2 += "<ul class=\"list_url\">";
-		//std::cout<<" sid start"<<start;
-		//std::cout<<otb.sid<<" sid "<<otb.stitle<<" stitle "<<otb.spubdate<<" spubdate"<<std::endl;
-		s2+= "<li><a href=\"article";
-		s2+= otb.sid;
-		s2+= "\">";
-		s2+= otb.stitle;
-		s2+= "</a> <span>";
-		s2+= otb.spubdate;
-		s2+= "</span></li>";
-		--start;
-		++i;
+	{
+		std::lock_guard<std::mutex> locker(mtx);
+		while(start >0 && i < PAGESIZE){
+			OrmTable otb = newsmap[std::to_string(start)];
+			if(i == 0) s2 += "<ul class=\"list_url\">";
+			//std::cout<<" sid start"<<start;
+			//std::cout<<otb.sid<<" sid "<<otb.stitle<<" stitle "<<otb.spubdate<<" spubdate"<<std::endl;
+			s2+= "<li><a href=\"article";
+			s2+= otb.sid;
+			s2+= "\">";
+			s2+= otb.stitle;
+			s2+= "</a> <span>";
+			s2+= otb.spubdate;
+			s2+= "</span></li>";
+			--start;
+			++i;
+		}
 	}
+	
 	s2+=" <div class=\"cleaner\"></div></ul><div class=\"seperate\"></div><div class= \"fr\" > <p>";
 	if(key > 1){
 		s2+= "<a href=\"page"+std::to_string(key-1)+ "\">上一页</a>";
@@ -167,12 +188,32 @@ std::string Cache::getSection2Page(int key){
 		s2+= "<a href=\"page1\">下一页</a></p></div>";
 	else
 		s2+= "<a href=\"page" + std::to_string(key+1)+ "\">下一页</a></p></div>";
-	return s2;
+	return 0;
 } 
-std::string Cache::getSection2Article(int key){
+ int Cache::getSection2Article(int key,std::string &s2){
+	std::string skey = std::to_string(key);
+	std::string stemp;
+	OrmTable otb;
 	//std::shared_lock<std::shared_mutex> lock(rwlock);
-	OrmTable otb = newsmap[std::to_string(key)];
-	std::string s2,stemp;
+	{
+		std::lock_guard<std::mutex> locker(mtx);
+		if(newsmap.find(skey) == newsmap.end()){
+			return -1;
+		}
+		otb = newsmap[skey];
+		++newsmap[skey].cnt;
+	}
+	if(otb.sarticle == ""){
+		MysqlDb *pdb = new MysqlDb(otb.sid);
+		if(!pdb->init()){
+			//send busy;
+		}
+		stemp = pdb->queryArticle();
+		delete pdb;
+	}else{
+		s2 = otb.sarticle;
+		return 0;
+	}
 	s2 += " <div class=\"title_header\">";
 	s2 +=  otb.stitle;
 	s2 +=  "</div>";
@@ -182,24 +223,15 @@ std::string Cache::getSection2Article(int key){
 		s2 += ".jpg\" alt=\"image\" width=\"300\" height=\"200\" /></div>";
 	}
 	s2 += "<p>";
-	++newsmap[std::to_string(key)].cnt;
-	if(otb.particle == NULL){
-		MysqlDb *pdb = new MysqlDb(otb.sid);
-		if(!pdb->init()){
-			//send busy;
-		}
-		stemp = pdb->queryArticle();
-		delete pdb;
-	}else{
-		stemp = otb.particle;
-	}
 	s2 += stemp;
 	s2 += "</p>";
-	return s2;
+	if(key > preid){
+		std::lock_guard<std::mutex> locker(mtx);
+		newsmap[std::to_string(key)].sarticle = s2;
+	}
+	return 0;
 } 
-//这个地方后续做成缓冲比较快。
-std::string Cache::getSection3() {
-	 std::string s3;
+int Cache::getSection3(std::string &s3) {
 	 
 	 s3 += "<div class=\"margin_bottom_40\"></div> <div class=\"section_320 fl margin_right_40\">";
 	 s3 += " </div><div class=\"cleaner\"></div></div><div class=\"section_w250 fr\"> ";
@@ -207,52 +239,65 @@ std::string Cache::getSection3() {
 	 s3 += "<div class=\"w250_content\"><div class=\"latest_news\"><ul class=\"list_url\">";
 	 
 	 struct cmp{
-	     bool operator() (const OrmTable a, const OrmTable b ){
-	 	    return a.cnt > b.cnt; 
+	     bool operator() (const std::pair<std::string,int> a, const std::pair<std::string,int> b ){
+	 	    return a.second > b.second; 
 	 	}
 	 };
-	 std::priority_queue<OrmTable,std::vector<OrmTable>, cmp>hotnews;
+	 std::priority_queue<std::pair<std::string,int>,std::vector<std::pair<std::string,int>>, cmp>hotnews;
+	 std::pair<std::string,int>tempair;
 	// std::shared_lock<std::shared_mutex> lock(rwlock);
 	 for(int i = 0; i< cachenum ; ++i){
-		 if(curid - i <= 0) break;
-		 OrmTable otb = newsmap[std::to_string(curid - i)];
+		 if(curid - i <= 0){
+		 	 break;
+		 }
+		 //
+		 {
+			 std::string skey = std::to_string(curid - i);
+			 std::lock_guard<std::mutex> locker(mtx);
+			 if(newsmap.find(skey) == newsmap.end()){
+				 continue;
+			 }
+			 tempair = {skey,newsmap[skey].cnt};
+		 }
 		 if(i < TOPN){
-			 hotnews.push(otb);
+			 hotnews.push(tempair);
 			 continue;
 		 }
-		 if(hotnews.top().cnt < otb.cnt){
+		 if(hotnews.top().second < tempair.second){
 			 hotnews.pop();
-			 hotnews.push(otb);
+			 hotnews.push(tempair);
 		 }
 	 }
-	 std::vector<std::pair<std::string,std::string>>vss(TOPN);
+	 std::vector<std::string>vs(TOPN);
 	 for(int i = 0 ; i < TOPN; ++i){
 		 if(!hotnews.empty()){
-			 vss[i] = {hotnews.top().sid,hotnews.top().stitle};
+			 vs[i] = hotnews.top().first;
 			 hotnews.pop();
 		 }
 	 }
-	 for(int i = TOPN - 1; i >=0 ; --i){
-		 s3 += "<li><a href=\" article";
-		 s3 += vss[i].first;
-		 s3 += "\">" ;
-		s3 += vss[i].second;
-		s3 +=  "</a></li>";
+	 {
+		 std::lock_guard<std::mutex> locker(mtx);
+		 for(int i = TOPN - 1; i >=0 ; --i){
+			 s3 += "<li><a href=\" article";
+			 s3 += vs[i];
+			 s3 += "\">" ;
+			 s3 += newsmap[vs[i]].stitle;
+			 s3 +=  "</a></li>";
+		 }
 	 }
 	 s3 += " </ul></div></div><div class=\"margin_bottom_20\"></div>";
 	 s3 += " <div class=\"section_w250_title visitor_title\">访问统计</div> <div class=\"w250_content\">";
-	 return s3;
+	 return 0;
 }
  
-std::string Cache::getSection4() {
-	std::string s4;
+int Cache::getSection4(std::string &s4) {
 	s4 += " <div class=\"title_header\" align = center>";
 	s4 += std::to_string(visitors);
 	s4 += "</div></div><div class=\"margin_bottom_20\"></div> ";
 	s4 += "</div><div class=\"margin_bottom_20\"></div></div></div><div id=\"footer_bg\">";
 	s4 += "  <div id=\"footer\"> <a href=\"http://www.miitbeian.gov.cn\">浙ICP备19004077</a> |  Designed by wl";
 	s4 += "</div></body></html>";
-	return s4;                 
+	return 0;                 
 }
 
 void Cache::updateCache(){
@@ -261,37 +306,34 @@ void Cache::updateCache(){
 		//send busy;
 		std::cout<<" access db error\n";
 	}
-	//需要枷锁读写锁,可以用lock guard
 	//std::unique_lock<std::shared_mutex> lock(rwlock);
-	int id = pdb->queryTitle(newsmap);
-	if(id <= curid){
+	std::unordered_map<std::string,OrmTable> tempmap = pdb->queryTitle();
+	delete pdb;
+	int id = tempmap.size();
+	if(id <= 0){
 		std::cout<<"no more news"<<'\n';
 	}else{
-		curid = id;
+		std::lock_guard<std::mutex> locker(mtx);
+		//tempmap里面的元素不会更新newsmap,如果重复
+		newsmap.insert(tempmap.begin(), tempmap.end());
+		curid += id;
+		int temid = curid - cachenum;
+		//删除preid之前的缓存。
+		if(temid > preid){
+			for(int i = preid; i < temid;++i){
+				std::string skey = std::to_string(i);
+				if(newsmap.find(skey)!= newsmap.end()){
+					newsmap[skey].sarticle = "";
+					newsmap[skey].simg = "";
+				}
+			}
+			preid = temid;
+		}
 	}
-	std::cout<<" cur id is"<< curid<< '\n';
-	delete pdb;
+	std::cout<<" cur id is"<< curid<<"pre id is "<<preid<<'\n';
 }		   
 void Cache::callback(){
 	updateCache();
-}		   				   
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+}		 
 
 
